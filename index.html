@@ -24,13 +24,22 @@
                 <!-- Треки будут добавляться сюда -->
             </ul>
         </div>
+
+        <div class="upload-section">
+            <h2>📁 Загрузить с компьютера</h2>
+            <div class="upload-area">
+                <input type="file" id="fileInput" accept=".mp3,audio/mpeg,audio/mp3">
+                <button id="uploadBtn" class="upload-btn">Загрузить трек</button>
+            </div>
+            <p class="hint">Поддерживаются файлы MP3</p>
+        </div>
         
         <div class="add-track">
-            <h3>Добавить трек</h3>
+            <h3>🔗 Или добавить по ссылке</h3>
             <input type="text" id="trackUrl" placeholder="Ссылка на MP3">
             <input type="text" id="trackTitle" placeholder="Название">
             <input type="text" id="trackArtist" placeholder="Исполнитель">
-            <button id="addTrackBtn">Добавить</button>
+            <button id="addTrackBtn">Добавить по ссылке</button>
         </div>
     </div>
     
