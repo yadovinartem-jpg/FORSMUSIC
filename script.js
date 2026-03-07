@@ -27,7 +27,6 @@ const uploadBtn = document.getElementById('uploadBtn');
 // Элементы эквалайзера - Q фактор
 const qSlider = document.getElementById('qSlider');
 const qValue = document.getElementById('qValue');
-const qPreset = document.getElementById('qPreset');
 
 // Аудио элемент
 const audio = new Audio();
@@ -223,17 +222,25 @@ function togglePlay() {
 
 function playNext() {
     if (tracks.length === 0) return;
-    const nextIndex = getNextTrackIndex();
-    if (nextIndex !== -1) {
-        playTrack(nextIndex);
+    if (currentTrackIndex === -1) {
+        playTrack(0);
+    } else {
+        const nextIndex = getNextTrackIndex();
+        if (nextIndex !== -1) {
+            playTrack(nextIndex);
+        }
     }
 }
 
 function playPrev() {
     if (tracks.length === 0) return;
-    const prevIndex = getPrevTrackIndex();
-    if (prevIndex !== -1) {
-        playTrack(prevIndex);
+    if (currentTrackIndex === -1) {
+        playTrack(0);
+    } else {
+        const prevIndex = getPrevTrackIndex();
+        if (prevIndex !== -1) {
+            playTrack(prevIndex);
+        }
     }
 }
 
@@ -354,10 +361,10 @@ function updateEQ() {
     localStorage.setItem('eqQ', currentQ);
 }
 
-function updateAllQ(value) {
+function updateQ(value) {
     currentQ = parseFloat(value);
     if (qSlider) qSlider.value = currentQ;
-    if (qValue) qValue.value = currentQ.toFixed(1);
+    if (qValue) qValue.textContent = currentQ.toFixed(1);
     
     if (filters.length > 0 && isEQInitialized) {
         for (let filter of filters) {
@@ -422,7 +429,7 @@ function loadEQSettings() {
     const savedQ = localStorage.getItem('eqQ');
     if (savedQ) {
         currentQ = parseFloat(savedQ);
-        updateAllQ(currentQ);
+        updateQ(currentQ);
     }
 }
 
@@ -533,21 +540,7 @@ if (nextBtn) {
 // ========== УПРАВЛЕНИЕ Q-ФАКТОРОМ ==========
 if (qSlider && qValue) {
     qSlider.addEventListener('input', (e) => {
-        updateAllQ(e.target.value);
-    });
-    
-    qValue.addEventListener('input', (e) => {
-        let val = parseFloat(e.target.value);
-        if (isNaN(val)) val = 1.0;
-        if (val < 0.5) val = 0.5;
-        if (val > 10) val = 10;
-        updateAllQ(val);
-    });
-}
-
-if (qPreset) {
-    qPreset.addEventListener('change', (e) => {
-        updateAllQ(e.target.value);
+        updateQ(e.target.value);
     });
 }
 
