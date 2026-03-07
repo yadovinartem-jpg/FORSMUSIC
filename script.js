@@ -12,9 +12,83 @@ const trackTitle = document.getElementById('trackTitle');
 const trackArtist = document.getElementById('trackArtist');
 const addTrackBtn = document.getElementById('addTrackBtn');
 
-// Элементы для загрузки с компьютера
+// ЗАГРУЗКА ФАЙЛОВ С КОМПЬЮТЕРА - обновленная версия с отладкой
+console.log('Скрипт загружен, ищем элементы...');
+
 const fileInput = document.getElementById('fileInput');
 const uploadBtn = document.getElementById('uploadBtn');
+
+console.log('fileInput найден:', fileInput);
+console.log('uploadBtn найден:', uploadBtn);
+
+if (!uploadBtn) {
+    console.error('ОШИБКА: Кнопка загрузки не найдена! Проверьте id="uploadBtn" в HTML');
+} else {
+    console.log('Кнопка найдена, добавляем обработчик...');
+    
+    uploadBtn.addEventListener('click', function(event) {
+        console.log('Кнопка нажата! Событие:', event);
+        
+        const file = fileInput.files[0];
+        console.log('Выбранный файл:', file);
+        
+        if (!file) {
+            console.log('Файл не выбран');
+            tg.showAlert('Сначала выберите файл!');
+            return;
+        }
+        
+        // Проверяем, что это MP3
+        console.log('Тип файла:', file.type);
+        console.log('Имя файла:', file.name);
+        
+        if (!file.type.includes('audio/mpeg') && !file.name.endsWith('.mp3') && !file.name.endsWith('.MP3')) {
+            console.log('Неправильный формат файла');
+            tg.showAlert('Пожалуйста, выберите MP3 файл');
+            return;
+        }
+        
+        try {
+            console.log('Создаем ссылку на файл...');
+            const fileUrl = URL.createObjectURL(file);
+            console.log('Ссылка создана:', fileUrl);
+            
+            // Используем имя файла как название (убираем расширение .mp3)
+            const fileName = file.name.replace('.mp3', '').replace('.MP3', '');
+            console.log('Имя трека:', fileName);
+            
+            // Добавляем в плейлист
+            tracks.push({
+                url: fileUrl,
+                title: fileName,
+                artist: 'Загружено с ПК'
+            });
+            
+            console.log('Трек добавлен в массив. Всего треков:', tracks.length);
+            
+            saveTracks();
+            updatePlaylist();
+            
+            // Очищаем input
+            fileInput.value = '';
+            console.log('Input очищен');
+            
+            tg.showAlert('Файл загружен!');
+            console.log('Уведомление отправлено');
+            
+            // Если это первый трек, обновляем отображение времени
+            if (tracks.length === 1) {
+                timeDisplay.textContent = '0:00 / 0:00';
+            }
+            
+        } catch (error) {
+            console.error('Ошибка при загрузке файла:', error);
+            tg.showAlert('Ошибка при загрузке файла: ' + error.message);
+        }
+    });
+    
+    console.log('Обработчик события добавлен');
+}
 
 // Аудио элемент
 const audio = new Audio();
