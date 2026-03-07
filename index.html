@@ -12,6 +12,15 @@
     <div class="app">
         <h1>FOR<span class="sity">SITY</span> MUSIC</h1>
         
+        <!-- Обложка текущего трека -->
+        <div class="album-art-container">
+            <img id="albumArt" class="album-art" src="https://via.placeholder.com/300x300/32007d/ffffff?text=FOR+SITY" alt="Album Art">
+            <div class="track-info-header">
+                <span id="currentTrackTitle">Нет трека</span>
+                <span id="currentTrackArtist"></span>
+            </div>
+        </div>
+        
         <div class="player-controls">
             <!-- Кнопки управления треками -->
             <div class="track-nav">
@@ -24,6 +33,7 @@
             <div class="extra-controls">
                 <button id="repeatBtn" class="control-btn" title="Режим повтора">🔁</button>
                 <button id="shuffleBtn" class="control-btn" title="Перемешать">🔀</button>
+                <button id="likeBtn" class="control-btn" title="Добавить в избранное">🤍</button>
             </div>
             
             <input type="range" id="progressBar" value="0" max="100">
@@ -37,107 +47,50 @@
             </div>
         </div>
 
-        <!-- Эквалайзер -->
-        <div class="equalizer-section">
-            <h2>🎚️ Эквалайзер</h2>
-            <button id="toggleEqBtn" class="toggle-eq-btn">Показать эквалайзер</button>
-            
-            <div id="eqControls" class="eq-controls hidden">
-                <!-- Управление шириной полос (Q-фактор) -->
-                <div class="eq-q-control">
-                    <label>Ширина полос (Q-фактор): <span id="qValue">1.0</span></label>
-                    <input type="range" id="qSlider" min="0.5" max="10" value="1.0" step="0.1">
-                </div>
-                
-                <div class="eq-presets">
-                    <button id="applyMyPresetBtn" class="preset-btn">🎧 Мой пресет</button>
-                    <button id="resetEqBtn" class="reset-btn">Сбросить</button>
-                </div>
-                
-                <div class="eq-sliders">
-                    <!-- 32 Гц -->
-                    <div class="eq-slider">
-                        <label>32 Гц</label>
-                        <input type="range" id="eq32" min="-12" max="12" value="0" step="0.5">
-                        <span id="eq32Val" class="eq-value">0 dB</span>
-                    </div>
-                    
-                    <!-- 64 Гц -->
-                    <div class="eq-slider">
-                        <label>64 Гц</label>
-                        <input type="range" id="eq64" min="-12" max="12" value="0" step="0.5">
-                        <span id="eq64Val" class="eq-value">0 dB</span>
-                    </div>
-                    
-                    <!-- 125 Гц -->
-                    <div class="eq-slider">
-                        <label>125 Гц</label>
-                        <input type="range" id="eq125" min="-12" max="12" value="0" step="0.5">
-                        <span id="eq125Val" class="eq-value">0 dB</span>
-                    </div>
-                    
-                    <!-- 250 Гц -->
-                    <div class="eq-slider">
-                        <label>250 Гц</label>
-                        <input type="range" id="eq250" min="-12" max="12" value="0" step="0.5">
-                        <span id="eq250Val" class="eq-value">0 dB</span>
-                    </div>
-                    
-                    <!-- 500 Гц -->
-                    <div class="eq-slider">
-                        <label>500 Гц</label>
-                        <input type="range" id="eq500" min="-12" max="12" value="0" step="0.5">
-                        <span id="eq500Val" class="eq-value">0 dB</span>
-                    </div>
-                    
-                    <!-- 1 кГц -->
-                    <div class="eq-slider">
-                        <label>1 кГц</label>
-                        <input type="range" id="eq1k" min="-12" max="12" value="0" step="0.5">
-                        <span id="eq1kVal" class="eq-value">0 dB</span>
-                    </div>
-                    
-                    <!-- 2 кГц -->
-                    <div class="eq-slider">
-                        <label>2 кГц</label>
-                        <input type="range" id="eq2k" min="-12" max="12" value="0" step="0.5">
-                        <span id="eq2kVal" class="eq-value">0 dB</span>
-                    </div>
-                    
-                    <!-- 4 кГц -->
-                    <div class="eq-slider">
-                        <label>4 кГц</label>
-                        <input type="range" id="eq4k" min="-12" max="12" value="0" step="0.5">
-                        <span id="eq4kVal" class="eq-value">0 dB</span>
-                    </div>
-                    
-                    <!-- 8 кГц -->
-                    <div class="eq-slider">
-                        <label>8 кГц</label>
-                        <input type="range" id="eq8k" min="-12" max="12" value="0" step="0.5">
-                        <span id="eq8kVal" class="eq-value">0 dB</span>
-                    </div>
-                    
-                    <!-- 16 кГц -->
-                    <div class="eq-slider">
-                        <label>16 кГц</label>
-                        <input type="range" id="eq16k" min="-12" max="12" value="0" step="0.5">
-                        <span id="eq16kVal" class="eq-value">0 dB</span>
-                    </div>
-                </div>
-                
-                <div class="eq-control-buttons">
-                    <button id="saveEqBtn">Сохранить настройки</button>
-                </div>
+        <!-- Навигация по библиотеке -->
+        <div class="library-nav">
+            <button id="showPlaylistsBtn" class="library-btn">📋 Плейлисты</button>
+            <button id="showFavoritesBtn" class="library-btn">❤️ Избранное</button>
+            <button id="showAllTracksBtn" class="library-btn active">🎵 Все треки</button>
+        </div>
+
+        <!-- Секция плейлистов (скрыта по умолчанию) -->
+        <div id="playlistsSection" class="playlists-section hidden">
+            <h2>Мои плейлисты</h2>
+            <button id="createPlaylistBtn" class="create-playlist-btn">➕ Создать плейлист</button>
+            <div id="playlistsContainer" class="playlists-container">
+                <!-- Плейлисты будут добавляться сюда -->
             </div>
         </div>
-        
-        <div class="playlist">
+
+        <!-- Секция избранного (скрыта по умолчанию) -->
+        <div id="favoritesSection" class="favorites-section hidden">
+            <h2>Избранное</h2>
+            <ul id="favoritesList" class="favorites-list">
+                <!-- Избранные треки будут здесь -->
+            </ul>
+        </div>
+
+        <!-- Основной плейлист (все треки) -->
+        <div id="allTracksSection" class="playlist">
             <h2>Плейлист</h2>
             <button id="clearPlaylistBtn" class="clear-btn">🗑️ Очистить плейлист</button>
             <ul id="playlist">
                 <!-- Треки будут добавляться сюда -->
             </ul>
+        </div>
+
+        <!-- Модальное окно создания плейлиста -->
+        <div id="playlistModal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Создать плейлист</h3>
+                <input type="text" id="playlistName" placeholder="Название плейлиста">
+                <input type="text" id="playlistAuthor" placeholder="Ваше имя">
+                <div class="modal-buttons">
+                    <button id="savePlaylistBtn">Создать</button>
+                    <button id="cancelPlaylistBtn">Отмена</button>
+                </div>
+            </div>
         </div>
 
         <div class="upload-section">
