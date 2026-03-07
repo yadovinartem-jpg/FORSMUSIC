@@ -3,17 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BeatGram Music Player</title>
+    <title>FORSITY MUSIC</title>
     <link rel="stylesheet" href="style.css">
     <!-- Подключаем SDK Telegram -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div class="app">
-        <h1>🎵 Мой Музыкальный Плеер</h1>
+        <h1>FOR<span class="sity">SITY</span> MUSIC</h1>
         
         <div class="player-controls">
-            <button id="playPauseBtn">▶️ Play</button>
+            <!-- Кнопки управления треками -->
+            <div class="track-nav">
+                <button id="prevBtn" class="nav-btn" title="Предыдущий трек">⏮️</button>
+                <button id="playPauseBtn" class="play-btn">▶️</button>
+                <button id="nextBtn" class="nav-btn" title="Следующий трек">⏭️</button>
+            </div>
             
             <!-- Дополнительные кнопки управления -->
             <div class="extra-controls">
@@ -38,6 +43,22 @@
             <button id="toggleEqBtn" class="toggle-eq-btn">Показать эквалайзер</button>
             
             <div id="eqControls" class="eq-controls hidden">
+                <!-- Управление шириной полос (Q-фактор) -->
+                <div class="eq-q-control">
+                    <label>Ширина полос (Q-фактор):</label>
+                    <div class="q-input-group">
+                        <input type="range" id="qSlider" min="0.5" max="10" value="1.0" step="0.1">
+                        <input type="number" id="qValue" min="0.5" max="10" value="1.0" step="0.1">
+                        <select id="qPreset">
+                            <option value="0.7">🎸 Рок (0.7)</option>
+                            <option value="1.0" selected>🎤 Стандарт (1.0)</option>
+                            <option value="1.4">🎻 Классика (1.4)</option>
+                            <option value="2.0">🔊 Узкие (2.0)</option>
+                            <option value="0.5">🌊 Широкие (0.5)</option>
+                        </select>
+                    </div>
+                </div>
+                
                 <div class="eq-presets">
                     <button id="applyMyPresetBtn" class="preset-btn">🎧 Мой пресет</button>
                     <button id="resetEqBtn" class="reset-btn">Сбросить</button>
@@ -136,14 +157,6 @@
                 <button id="uploadBtn" class="upload-btn">Загрузить трек</button>
             </div>
             <p class="hint">Поддерживаются файлы MP3</p>
-        </div>
-        
-        <div class="add-track">
-            <h3>🔗 Или добавить по ссылке</h3>
-            <input type="text" id="trackUrl" placeholder="Ссылка на MP3">
-            <input type="text" id="trackTitle" placeholder="Название">
-            <input type="text" id="trackArtist" placeholder="Исполнитель">
-            <button id="addTrackBtn">Добавить по ссылке</button>
         </div>
     </div>
     
