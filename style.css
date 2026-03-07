@@ -149,7 +149,7 @@ h1 {
     flex: 1;
     height: 4px;
     -webkit-appearance: none;
-    background: linear-gradient(to right, #000000, #32007d);
+    background: linear-gradient(to right, #000000, #6600ff);
     border-radius: 2px;
     cursor: pointer;
 }
@@ -346,7 +346,7 @@ h2, h3 {
     width: 100%;
     height: 4px;
     -webkit-appearance: none;
-    background: linear-gradient(to right, #000000, #32007d);
+    background: linear-gradient(to right, #000000, #6600ff);
     border-radius: 2px;
     cursor: pointer;
 }
@@ -429,7 +429,7 @@ h2, h3 {
     flex: 1;
     height: 4px;
     -webkit-appearance: none;
-    background: linear-gradient(to right, #000000, #32007d);
+    background: linear-gradient(to right, #000000, #6600ff);
     border-radius: 2px;
 }
 
