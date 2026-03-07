@@ -150,3 +150,158 @@ h2, h3 {
     margin-top: 8px;
     text-align: center;
 }
+
+/* Стили для эквалайзера */
+.equalizer-section {
+    background: var(--tg-theme-secondary-bg-color, #fff);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.toggle-eq-btn {
+    background: var(--tg-theme-button-color, #2481cc);
+    color: var(--tg-theme-button-text-color, #fff);
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    width: 100%;
+    margin: 10px 0;
+}
+
+.eq-controls {
+    margin-top: 15px;
+    transition: all 0.3s ease;
+}
+
+.eq-controls.hidden {
+    display: none;
+}
+
+.eq-presets {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.eq-presets select {
+    flex: 1;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--tg-theme-hint-color, #ddd);
+    background: var(--tg-theme-bg-color, #fff);
+    color: var(--tg-theme-text-color, #222);
+}
+
+.eq-presets button {
+    padding: 8px 15px;
+    background: var(--tg-theme-button-color, #2481cc);
+    color: var(--tg-theme-button-text-color, #fff);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.eq-sliders {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin: 20px 0;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.eq-slider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.eq-slider label {
+    width: 50px;
+    font-size: 12px;
+    color: var(--tg-theme-hint-color, #666);
+}
+
+.eq-slider input[type="range"] {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    background: linear-gradient(to right, #ff4d4d, #ffd700, #4caf50);
+    border-radius: 2px;
+}
+
+.eq-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    background: var(--tg-theme-button-color, #2481cc);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.eq-slider input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: var(--tg-theme-button-color, #2481cc);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.eq-value {
+    width: 50px;
+    font-size: 12px;
+    text-align: right;
+    color: var(--tg-theme-text-color, #222);
+}
+
+.eq-control-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.eq-control-buttons button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#resetEqBtn {
+    background: #f44336;
+    color: white;
+}
+
+#saveEqBtn {
+    background: #4CAF50;
+    color: white;
+}
+
+/* Стили для полос эквалайзера (визуализация) */
+.eq-visualizer {
+    width: 100%;
+    height: 100px;
+    margin-top: 20px;
+    background: var(--tg-theme-bg-color, #f0f0f0);
+    border-radius: 8px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    padding: 10px;
+}
+
+.eq-bar {
+    width: 20px;
+    background: var(--tg-theme-button-color, #2481cc);
+    border-radius: 4px 4px 0 0;
+    transition: height 0.1s ease;
+}
