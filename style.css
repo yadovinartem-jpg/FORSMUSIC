@@ -149,7 +149,7 @@ h1 {
     flex: 1;
     height: 4px;
     -webkit-appearance: none;
-    background: linear-gradient(to right, #4CAF50, #ffd700, #ff4d4d);
+    background: linear-gradient(to right, #000000, #32007d);
     border-radius: 2px;
     cursor: pointer;
 }
@@ -342,33 +342,37 @@ h2, h3 {
     font-weight: 600;
 }
 
-.q-input-group {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.q-input-group input[type="range"] {
+.eq-q-control input[type="range"] {
     width: 100%;
-    accent-color: #32007d;
-}
-
-.q-input-group input[type="number"] {
-    padding: 8px;
-    border: 2px solid #32007d;
-    border-radius: 6px;
-    text-align: center;
-    font-size: 16px;
-}
-
-.q-input-group select {
-    padding: 8px;
-    border: 2px solid #32007d;
-    border-radius: 6px;
-    background: white;
-    color: #32007d;
-    font-weight: 600;
+    height: 4px;
+    -webkit-appearance: none;
+    background: linear-gradient(to right, #000000, #32007d);
+    border-radius: 2px;
     cursor: pointer;
+}
+
+.eq-q-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #32007d;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.eq-q-control input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: #32007d;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+#qValue {
+    color: #32007d;
+    font-weight: 700;
 }
 
 .eq-presets {
@@ -425,7 +429,7 @@ h2, h3 {
     flex: 1;
     height: 4px;
     -webkit-appearance: none;
-    background: linear-gradient(to right, #ff4d4d, #ffd700, #4caf50);
+    background: linear-gradient(to right, #000000, #32007d);
     border-radius: 2px;
 }
 
