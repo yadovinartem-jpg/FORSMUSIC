@@ -4,13 +4,11 @@ tg.expand();
 
 // Основные элементы
 const playPauseBtn = document.getElementById('playPauseBtn');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
 const progressBar = document.getElementById('progressBar');
 const timeDisplay = document.getElementById('timeDisplay');
 const playlist = document.getElementById('playlist');
-const trackUrl = document.getElementById('trackUrl');
-const trackTitle = document.getElementById('trackTitle');
-const trackArtist = document.getElementById('trackArtist');
-const addTrackBtn = document.getElementById('addTrackBtn');
 const clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
 
 // Элементы громкости
@@ -26,6 +24,11 @@ const shuffleBtn = document.getElementById('shuffleBtn');
 const fileInput = document.getElementById('fileInput');
 const uploadBtn = document.getElementById('uploadBtn');
 
+// Элементы эквалайзера - Q фактор
+const qSlider = document.getElementById('qSlider');
+const qValue = document.getElementById('qValue');
+const qPreset = document.getElementById('qPreset');
+
 // Аудио элемент
 const audio = new Audio();
 
@@ -40,14 +43,11 @@ let shuffleMode = false;
 let shuffledIndices = [];
 
 // ========== ОЧИСТКА ПРИ ЗАГРУЗКЕ ==========
-// Не загружаем старые треки из localStorage
 tracks = [];
 updatePlaylist();
 
 // ========== ГРОМКОСТЬ ==========
 function initVolume() {
-    console.log('Инициализация громкости...');
-    
     const savedVolume = localStorage.getItem('volume');
     let startVolume = 70;
     
@@ -116,19 +116,15 @@ function formatTime(seconds) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-// Функция для получения следующего трека
 function getNextTrackIndex() {
     if (tracks.length === 0) return -1;
     
     if (repeatMode === 2) {
-        // Повтор одного трека
         return currentTrackIndex;
     }
     
     if (shuffleMode) {
-        // Режим перемешивания
         if (shuffledIndices.length === 0) {
-            // Создаем новый перемешанный список
             shuffledIndices = Array.from({ length: tracks.length }, (_, i) => i);
             for (let i = shuffledIndices.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -140,12 +136,26 @@ function getNextTrackIndex() {
         return nextIndex;
     }
     
-    // Обычный порядок
     if (currentTrackIndex < tracks.length - 1) {
         return currentTrackIndex + 1;
     } else if (repeatMode === 1) {
-        // Повтор всего плейлиста
         return 0;
+    }
+    
+    return -1;
+}
+
+function getPrevTrackIndex() {
+    if (tracks.length === 0) return -1;
+    
+    if (repeatMode === 2) {
+        return currentTrackIndex;
+    }
+    
+    if (currentTrackIndex > 0) {
+        return currentTrackIndex - 1;
+    } else if (repeatMode === 1) {
+        return tracks.length - 1;
     }
     
     return -1;
@@ -158,24 +168,21 @@ function playTrack(index) {
         currentTrackIndex = index;
         audio.src = tracks[index].url;
         
-        // Обновляем перемешанный список, если нужно
         if (shuffleMode) {
             shuffledIndices = shuffledIndices.filter(i => i !== index);
         }
         
         audio.onerror = function(e) {
-            console.error('Ошибка загрузки аудио:', e);
             tg.showAlert('Не удалось загрузить трек');
             isPlaying = false;
-            playPauseBtn.textContent = '▶️ Play';
+            playPauseBtn.textContent = '▶️';
         };
         
         audio.play().then(() => {
             isPlaying = true;
-            playPauseBtn.textContent = '⏸️ Пауза';
+            playPauseBtn.textContent = '⏸️';
             updatePlaylist();
             
-            // Инициализируем эквалайзер при первом воспроизведении
             if (!isEQInitialized) {
                 setTimeout(() => {
                     initEQ();
@@ -183,10 +190,9 @@ function playTrack(index) {
             }
             
         }).catch(error => {
-            console.error('Ошибка воспроизведения:', error);
             tg.showAlert('Не удалось воспроизвести трек');
             isPlaying = false;
-            playPauseBtn.textContent = '▶️ Play';
+            playPauseBtn.textContent = '▶️';
         });
     }
 }
@@ -199,24 +205,38 @@ function togglePlay() {
     
     if (isPlaying) {
         audio.pause();
-        playPauseBtn.textContent = '▶️ Play';
+        playPauseBtn.textContent = '▶️';
         isPlaying = false;
     } else {
         if (currentTrackIndex === -1) {
             playTrack(0);
         } else {
             audio.play().then(() => {
-                playPauseBtn.textContent = '⏸️ Пауза';
+                playPauseBtn.textContent = '⏸️';
                 isPlaying = true;
             }).catch(error => {
-                console.error('Ошибка воспроизведения:', error);
                 tg.showAlert('Не удалось воспроизвести трек');
             });
         }
     }
 }
 
-// Обновление иконок режимов
+function playNext() {
+    if (tracks.length === 0) return;
+    const nextIndex = getNextTrackIndex();
+    if (nextIndex !== -1) {
+        playTrack(nextIndex);
+    }
+}
+
+function playPrev() {
+    if (tracks.length === 0) return;
+    const prevIndex = getPrevTrackIndex();
+    if (prevIndex !== -1) {
+        playTrack(prevIndex);
+    }
+}
+
 function updateModeButtons() {
     if (repeatBtn) {
         repeatBtn.textContent = repeatMode === 0 ? '🔁' : repeatMode === 1 ? '🔁' : '🔂';
@@ -233,19 +253,6 @@ let audioContext = null;
 let source = null;
 let filters = [];
 let isEQInitialized = false;
-
-const frequencyMap = {
-    'eq32': 32,
-    'eq64': 64,
-    'eq125': 125,
-    'eq250': 250,
-    'eq500': 500,
-    'eq1k': 1000,
-    'eq2k': 2000,
-    'eq4k': 4000,
-    'eq8k': 8000,
-    'eq16k': 16000
-};
 
 const idByFrequency = {
     32: 'eq32',
@@ -288,6 +295,8 @@ let eqSettings = {
     16000: 0
 };
 
+let currentQ = 1.0;
+
 const toggleEqBtn = document.getElementById('toggleEqBtn');
 const eqControls = document.getElementById('eqControls');
 const applyMyPresetBtn = document.getElementById('applyMyPresetBtn');
@@ -315,7 +324,7 @@ function initEQ() {
             const filter = audioContext.createBiquadFilter();
             filter.type = 'peaking';
             filter.frequency.value = freq;
-            filter.Q.value = 1.0;
+            filter.Q.value = currentQ;
             filter.gain.value = eqSettings[freq] || 0;
             filters.push(filter);
         }
@@ -328,7 +337,6 @@ function initEQ() {
         filters[filters.length - 1].connect(audioContext.destination);
         
         isEQInitialized = true;
-        console.log('✅ Эквалайзер инициализирован');
     } catch (e) {
         console.error('Ошибка инициализации эквалайзера:', e);
     }
@@ -338,12 +346,24 @@ function updateEQ() {
     if (!filters.length || !isEQInitialized) return;
     
     for (let i = 0; i < filters.length; i++) {
-        const freq = frequencies[i];
-        const gain = eqSettings[freq];
-        filters[i].gain.value = gain;
+        filters[i].gain.value = eqSettings[frequencies[i]];
+        filters[i].Q.value = currentQ;
     }
     
     localStorage.setItem('eqSettings', JSON.stringify(eqSettings));
+    localStorage.setItem('eqQ', currentQ);
+}
+
+function updateAllQ(value) {
+    currentQ = parseFloat(value);
+    if (qSlider) qSlider.value = currentQ;
+    if (qValue) qValue.value = currentQ.toFixed(1);
+    
+    if (filters.length > 0 && isEQInitialized) {
+        for (let filter of filters) {
+            filter.Q.value = currentQ;
+        }
+    }
 }
 
 function applyMyPreset() {
@@ -396,9 +416,13 @@ function loadEQSettings() {
                     eqSettings[freq] = settings[freq];
                 }
             }
-        } catch (e) {
-            console.error('Ошибка загрузки настроек EQ:', e);
-        }
+        } catch (e) {}
+    }
+    
+    const savedQ = localStorage.getItem('eqQ');
+    if (savedQ) {
+        currentQ = parseFloat(savedQ);
+        updateAllQ(currentQ);
     }
 }
 
@@ -457,30 +481,7 @@ if (uploadBtn) {
             tg.showAlert('Файл загружен!');
             
         } catch (error) {
-            console.error('Ошибка:', error);
             tg.showAlert('Ошибка загрузки');
-        }
-    });
-}
-
-// ========== ДОБАВЛЕНИЕ ПО ССЫЛКЕ ==========
-if (addTrackBtn) {
-    addTrackBtn.addEventListener('click', () => {
-        const url = trackUrl.value.trim();
-        const title = trackTitle.value.trim();
-        const artist = trackArtist.value.trim();
-        
-        if (url && title && artist) {
-            tracks.push({ url, title, artist });
-            updatePlaylist();
-            
-            trackUrl.value = '';
-            trackTitle.value = '';
-            trackArtist.value = '';
-            
-            tg.showAlert('Трек добавлен!');
-        } else {
-            tg.showAlert('Заполните все поля!');
         }
     });
 }
@@ -492,7 +493,7 @@ if (clearPlaylistBtn) {
         currentTrackIndex = -1;
         isPlaying = false;
         audio.pause();
-        playPauseBtn.textContent = '▶️ Play';
+        playPauseBtn.textContent = '▶️';
         updatePlaylist();
         tg.showAlert('Плейлист очищен');
     });
@@ -520,6 +521,36 @@ if (shuffleBtn) {
     });
 }
 
+// ========== НАВИГАЦИЯ ПО ТРЕКАМ ==========
+if (prevBtn) {
+    prevBtn.addEventListener('click', playPrev);
+}
+
+if (nextBtn) {
+    nextBtn.addEventListener('click', playNext);
+}
+
+// ========== УПРАВЛЕНИЕ Q-ФАКТОРОМ ==========
+if (qSlider && qValue) {
+    qSlider.addEventListener('input', (e) => {
+        updateAllQ(e.target.value);
+    });
+    
+    qValue.addEventListener('input', (e) => {
+        let val = parseFloat(e.target.value);
+        if (isNaN(val)) val = 1.0;
+        if (val < 0.5) val = 0.5;
+        if (val > 10) val = 10;
+        updateAllQ(val);
+    });
+}
+
+if (qPreset) {
+    qPreset.addEventListener('change', (e) => {
+        updateAllQ(e.target.value);
+    });
+}
+
 // ========== СОБЫТИЯ АУДИО ==========
 audio.addEventListener('timeupdate', () => {
     if (audio.duration && !isNaN(audio.duration)) {
@@ -538,7 +569,7 @@ audio.addEventListener('ended', () => {
         playTrack(nextIndex);
     } else {
         isPlaying = false;
-        playPauseBtn.textContent = '▶️ Play';
+        playPauseBtn.textContent = '▶️';
         currentTrackIndex = -1;
         if (progressBar) progressBar.value = 0;
         if (timeDisplay) timeDisplay.textContent = '0:00 / 0:00';
@@ -591,15 +622,12 @@ if (saveEqBtn) {
 
 // ========== ИНИЦИАЛИЗАЦИЯ ==========
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM загружен, инициализация...');
-    
     initVolume();
     loadEQSettings();
     initEQSliders();
     updateModeButtons();
     
     tg.ready();
-    console.log('✅ Приложение готово');
 });
 
 // Очистка временных ссылок
