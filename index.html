@@ -31,32 +31,25 @@
             <button id="toggleEqBtn" class="toggle-eq-btn">Показать эквалайзер</button>
             
             <div id="eqControls" class="eq-controls hidden">
+                <!-- Убрал все пресеты, оставил только ваш -->
                 <div class="eq-presets">
-                    <select id="eqPreset">
-                        <option value="flat">📊 Плоский</option>
-                        <option value="rock">🎸 Рок</option>
-                        <option value="pop">🎤 Поп</option>
-                        <option value="jazz">🎷 Джаз</option>
-                        <option value="classical">🎻 Классика</option>
-                        <option value="bass">🔊 Усиление басов</option>
-                        <option value="treble">🎵 Усиление высоких</option>
-                    </select>
-                    <button id="applyPresetBtn">Применить</button>
+                    <button id="applyMyPresetBtn" class="preset-btn">🎧 Мой пресет</button>
+                    <button id="resetEqBtn">Сбросить</button>
                 </div>
                 
                 <div class="eq-sliders">
-                    <!-- 31 Гц -->
+                    <!-- 32 Гц -->
                     <div class="eq-slider">
-                        <label>31 Гц</label>
-                        <input type="range" id="eq31" min="-12" max="12" value="0" step="0.5">
-                        <span id="eq31Val" class="eq-value">0 dB</span>
+                        <label>32 Гц</label>
+                        <input type="range" id="eq32" min="-12" max="12" value="0" step="0.5">
+                        <span id="eq32Val" class="eq-value">0 dB</span>
                     </div>
                     
-                    <!-- 62 Гц -->
+                    <!-- 64 Гц -->
                     <div class="eq-slider">
-                        <label>62 Гц</label>
-                        <input type="range" id="eq62" min="-12" max="12" value="0" step="0.5">
-                        <span id="eq62Val" class="eq-value">0 dB</span>
+                        <label>64 Гц</label>
+                        <input type="range" id="eq64" min="-12" max="12" value="0" step="0.5">
+                        <span id="eq64Val" class="eq-value">0 dB</span>
                     </div>
                     
                     <!-- 125 Гц -->
@@ -117,7 +110,6 @@
                 </div>
                 
                 <div class="eq-control-buttons">
-                    <button id="resetEqBtn">Сбросить</button>
                     <button id="saveEqBtn">Сохранить настройки</button>
                 </div>
             </div>
