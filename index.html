@@ -14,6 +14,13 @@
         
         <div class="player-controls">
             <button id="playPauseBtn">▶️ Play</button>
+            
+            <!-- Дополнительные кнопки управления -->
+            <div class="extra-controls">
+                <button id="repeatBtn" class="control-btn" title="Режим повтора">🔁</button>
+                <button id="shuffleBtn" class="control-btn" title="Перемешать">🔀</button>
+            </div>
+            
             <input type="range" id="progressBar" value="0" max="100">
             <span id="timeDisplay">0:00 / 0:00</span>
             
@@ -31,10 +38,9 @@
             <button id="toggleEqBtn" class="toggle-eq-btn">Показать эквалайзер</button>
             
             <div id="eqControls" class="eq-controls hidden">
-                <!-- Убрал все пресеты, оставил только ваш -->
                 <div class="eq-presets">
                     <button id="applyMyPresetBtn" class="preset-btn">🎧 Мой пресет</button>
-                    <button id="resetEqBtn">Сбросить</button>
+                    <button id="resetEqBtn" class="reset-btn">Сбросить</button>
                 </div>
                 
                 <div class="eq-sliders">
@@ -117,6 +123,7 @@
         
         <div class="playlist">
             <h2>Плейлист</h2>
+            <button id="clearPlaylistBtn" class="clear-btn">🗑️ Очистить плейлист</button>
             <ul id="playlist">
                 <!-- Треки будут добавляться сюда -->
             </ul>
