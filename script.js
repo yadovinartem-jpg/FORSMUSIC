@@ -362,6 +362,7 @@ function updateEQ() {
 }
 
 function updateQ(value) {
+    // Инвертируем значение: чем правее ползунок, тем больше значение
     currentQ = parseFloat(value);
     if (qSlider) qSlider.value = currentQ;
     if (qValue) qValue.textContent = currentQ.toFixed(1);
