@@ -12,7 +12,7 @@ const trackTitle = document.getElementById('trackTitle');
 const trackArtist = document.getElementById('trackArtist');
 const addTrackBtn = document.getElementById('addTrackBtn');
 
-// ЗАГРУЗКА ФАЙЛОВ С КОМПЬЮТЕРА - обновленная версия с отладкой
+// ЗАГРУЗКА ФАЙЛОВ С КОМПЬЮТЕРА - отладка
 console.log('Скрипт загружен, ищем элементы...');
 
 const fileInput = document.getElementById('fileInput');
@@ -99,17 +99,27 @@ let currentTrackIndex = -1;
 let tracks = [];
 
 // ========== ЭКВАЛАЙЗЕР ==========
+console.log('Инициализация эквалайзера...');
+
 let audioContext;
 let source;
 let filters = [];
-let eqEnabled = true; // Включен по умолчанию
+let eqEnabled = true;
 
-// Настройки эквалайзера по умолчанию
 const eqFrequencies = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 let eqSettings = new Array(10).fill(0);
 
 // Элементы эквалайзера
-let toggleEqBtn, eqControls, eqPreset, applyPresetBtn, resetEqBtn, saveEqBtn;
+const toggleEqBtn = document.getElementById('toggleEqBtn');
+const eqControls = document.getElementById('eqControls');
+const eqPreset = document.getElementById('eqPreset');
+const applyPresetBtn = document.getElementById('applyPresetBtn');
+const resetEqBtn = document.getElementById('resetEqBtn');
+const saveEqBtn = document.getElementById('saveEqBtn');
+
+console.log('toggleEqBtn:', toggleEqBtn);
+console.log('eqControls:', eqControls);
+
 let eqSliders = [];
 let eqValues = [];
 
@@ -123,6 +133,190 @@ const eqPresets = {
     bass: [6, 6, 5, 3, 1, 0, 0, 0, 0, 0],
     treble: [0, 0, 0, 0, 0, 1, 2, 4, 6, 6]
 };
+
+// Инициализация ползунков
+for (let i = 0; i < eqFrequencies.length; i++) {
+    const freq = eqFrequencies[i];
+    const slider = document.getElementById(`eq${freq}`);
+    const value = document.getElementById(`eq${freq}Val`);
+    if (slider && value) {
+        eqSliders.push(slider);
+        eqValues.push(value);
+        
+        // Устанавливаем начальное значение
+        slider.value = eqSettings[i];
+        value.textContent = eqSettings[i].toFixed(1) + ' dB';
+        
+        // Добавляем обработчик
+        slider.addEventListener('input', createEqHandler(i));
+    } else {
+        console.warn(`Элемент eq${freq} или eq${freq}Val не найден`);
+    }
+}
+
+// Создаем обработчик для каждого ползунка
+function createEqHandler(index) {
+    return function(e) {
+        const val = parseFloat(e.target.value);
+        eqSettings[index] = val;
+        if (eqValues[index]) {
+            eqValues[index].textContent = val.toFixed(1) + ' dB';
+        }
+        updateEQ();
+    };
+}
+
+// Загрузка сохраненных настроек
+function loadEQSettings() {
+    const saved = localStorage.getItem('eqSettings');
+    if (saved) {
+        try {
+            const settings = JSON.parse(saved);
+            if (settings.length === eqSettings.length) {
+                eqSettings = settings;
+                for (let i = 0; i < eqSettings.length; i++) {
+                    if (eqSliders[i]) {
+                        eqSliders[i].value = eqSettings[i];
+                        eqValues[i].textContent = eqSettings[i].toFixed(1) + ' dB';
+                    }
+                }
+                updateEQ();
+            }
+        } catch (e) {
+            console.error('Ошибка загрузки настроек EQ:', e);
+        }
+    }
+}
+
+// Обновление настроек эквалайзера
+function updateEQ() {
+    if (!filters.length) return;
+    for (let i = 0; i < filters.length; i++) {
+        filters[i].gain.value = eqSettings[i];
+    }
+    localStorage.setItem('eqSettings', JSON.stringify(eqSettings));
+}
+
+// Применение пресета
+function applyPreset(presetName) {
+    const preset = eqPresets[presetName];
+    if (!preset) return;
+    for (let i = 0; i < preset.length; i++) {
+        eqSettings[i] = preset[i];
+        if (eqSliders[i]) {
+            eqSliders[i].value = preset[i];
+            eqValues[i].textContent = preset[i].toFixed(1) + ' dB';
+        }
+    }
+    updateEQ();
+}
+
+// Сброс эквалайзера
+function resetEQ() {
+    for (let i = 0; i < eqSettings.length; i++) {
+        eqSettings[i] = 0;
+        if (eqSliders[i]) {
+            eqSliders[i].value = 0;
+            eqValues[i].textContent = '0.0 dB';
+        }
+    }
+    updateEQ();
+}
+
+// Функция настройки эквалайзера для текущего аудио
+function setupEQForCurrentAudio() {
+    if (!audioContext) {
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            source = audioContext.createMediaElementSource(audio);
+            
+            filters = [];
+            for (let i = 0; i < eqFrequencies.length; i++) {
+                const filter = audioContext.createBiquadFilter();
+                filter.type = 'peaking';
+                filter.frequency.value = eqFrequencies[i];
+                filter.Q.value = 1;
+                filter.gain.value = eqSettings[i];
+                filters.push(filter);
+            }
+            
+            for (let i = 0; i < filters.length - 1; i++) {
+                filters[i].connect(filters[i + 1]);
+            }
+            
+            connectEQ();
+            console.log('✅ Эквалайзер инициализирован');
+        } catch (e) {
+            console.error('Ошибка инициализации эквалайзера:', e);
+        }
+    } else {
+        updateEQ();
+    }
+}
+
+// Подключение эквалайзера к аудио
+function connectEQ() {
+    if (!audioContext || !source || !filters.length) return;
+    try {
+        source.disconnect();
+        if (eqEnabled && filters.length > 0) {
+            source.connect(filters[0]);
+            filters[filters.length - 1].connect(audioContext.destination);
+            console.log('✅ Эквалайзер подключен');
+        } else {
+            source.connect(audioContext.destination);
+            console.log('🔊 Прямое подключение');
+        }
+    } catch (e) {
+        console.error('Ошибка подключения эквалайзера:', e);
+    }
+}
+
+// Назначаем обработчики кнопок эквалайзера
+if (toggleEqBtn && eqControls) {
+    toggleEqBtn.addEventListener('click', () => {
+        eqControls.classList.toggle('hidden');
+        toggleEqBtn.textContent = eqControls.classList.contains('hidden') ? 
+            'Показать эквалайзер' : 'Скрыть эквалайзер';
+        console.log('Эквалайзер переключен, hidden:', eqControls.classList.contains('hidden'));
+    });
+} else {
+    console.error('Кнопка toggleEqBtn или eqControls не найдены');
+}
+
+if (applyPresetBtn) {
+    applyPresetBtn.addEventListener('click', () => {
+        const preset = eqPreset.value;
+        applyPreset(preset);
+        tg.showAlert(`Пресет "${preset}" применен`);
+    });
+}
+
+if (resetEqBtn) {
+    resetEqBtn.addEventListener('click', () => {
+        resetEQ();
+        tg.showAlert('Эквалайзер сброшен');
+    });
+}
+
+if (saveEqBtn) {
+    saveEqBtn.addEventListener('click', () => {
+        localStorage.setItem('eqSettings', JSON.stringify(eqSettings));
+        tg.showAlert('Настройки сохранены');
+    });
+}
+
+// Загружаем настройки при старте
+loadEQSettings();
+
+// Добавляем обработчик на аудио для инициализации при первом воспроизведении
+audio.addEventListener('play', function onFirstPlay() {
+    if (!audioContext) {
+        setupEQForCurrentAudio();
+    }
+    audio.removeEventListener('play', onFirstPlay);
+});
+
 // ================================
 
 // Загрузка треков из localStorage при старте
@@ -156,13 +350,11 @@ function updatePlaylist() {
 
 function playTrack(index) {
     if (index >= 0 && index < tracks.length) {
-        // Останавливаем текущее воспроизведение
         audio.pause();
         
         currentTrackIndex = index;
         audio.src = tracks[index].url;
         
-        // Добавляем обработчик ошибок
         audio.onerror = function(e) {
             console.error('Ошибка загрузки аудио:', e);
             tg.showAlert('Не удалось загрузить трек. Проверьте ссылку или файл.');
@@ -170,13 +362,11 @@ function playTrack(index) {
             playPauseBtn.textContent = '▶️ Play';
         };
         
-        // Пытаемся воспроизвести
         audio.play().then(() => {
             isPlaying = true;
             playPauseBtn.textContent = '⏸️ Пауза';
             updatePlaylist();
             
-            // Подключаем эквалайзер к новому аудио
             setTimeout(() => {
                 setupEQForCurrentAudio();
             }, 100);
@@ -275,20 +465,15 @@ uploadBtn.addEventListener('click', () => {
         return;
     }
     
-    // Проверяем, что это MP3
     if (!file.type.includes('audio/mpeg') && !file.name.endsWith('.mp3')) {
         tg.showAlert('Пожалуйста, выберите MP3 файл');
         return;
     }
     
     try {
-        // Создаем временную ссылку на файл
         const fileUrl = URL.createObjectURL(file);
-        
-        // Используем имя файла как название (убираем расширение .mp3)
         const fileName = file.name.replace('.mp3', '').replace('.MP3', '');
         
-        // Добавляем в плейлист
         tracks.push({
             url: fileUrl,
             title: fileName,
@@ -297,12 +482,9 @@ uploadBtn.addEventListener('click', () => {
         
         saveTracks();
         updatePlaylist();
-        
-        // Очищаем input
         fileInput.value = '';
         tg.showAlert('Файл загружен!');
         
-        // Если это первый трек, обновляем отображение времени
         if (tracks.length === 1) {
             timeDisplay.textContent = '0:00 / 0:00';
         }
@@ -327,7 +509,6 @@ addTrackBtn.addEventListener('click', () => {
         saveTracks();
         updatePlaylist();
         
-        // Очистить поля
         trackUrl.value = '';
         trackTitle.value = '';
         trackArtist.value = '';
@@ -340,206 +521,6 @@ addTrackBtn.addEventListener('click', () => {
 
 // Сообщаем Telegram, что приложение готово
 tg.ready();
-
-// ========== ФУНКЦИИ ЭКВАЛАЙЗЕРА ==========
-
-// Инициализация элементов эквалайзера после загрузки DOM
-document.addEventListener('DOMContentLoaded', function() {
-    // Находим все элементы эквалайзера
-    toggleEqBtn = document.getElementById('toggleEqBtn');
-    eqControls = document.getElementById('eqControls');
-    eqPreset = document.getElementById('eqPreset');
-    applyPresetBtn = document.getElementById('applyPresetBtn');
-    resetEqBtn = document.getElementById('resetEqBtn');
-    saveEqBtn = document.getElementById('saveEqBtn');
-    
-    // Инициализируем ползунки
-    for (let i = 0; i < eqFrequencies.length; i++) {
-        const freq = eqFrequencies[i];
-        const slider = document.getElementById(`eq${freq}`);
-        const value = document.getElementById(`eq${freq}Val`);
-        if (slider && value) {
-            eqSliders.push(slider);
-            eqValues.push(value);
-            
-            // Добавляем обработчик
-            slider.addEventListener('input', createEqHandler(i));
-        }
-    }
-    
-    // Загружаем сохраненные настройки
-    loadEQSettings();
-    
-    // Добавляем обработчики событий
-    if (toggleEqBtn) {
-        toggleEqBtn.addEventListener('click', () => {
-            eqControls.classList.toggle('hidden');
-            toggleEqBtn.textContent = eqControls.classList.contains('hidden') ? 
-                'Показать эквалайзер' : 'Скрыть эквалайзер';
-        });
-    }
-    
-    if (applyPresetBtn) {
-        applyPresetBtn.addEventListener('click', () => {
-            const preset = eqPreset.value;
-            applyPreset(preset);
-            tg.showAlert(`Пресет "${preset}" применен`);
-        });
-    }
-    
-    if (resetEqBtn) {
-        resetEqBtn.addEventListener('click', () => {
-            resetEQ();
-            tg.showAlert('Эквалайзер сброшен');
-        });
-    }
-    
-    if (saveEqBtn) {
-        saveEqBtn.addEventListener('click', () => {
-            localStorage.setItem('eqSettings', JSON.stringify(eqSettings));
-            tg.showAlert('Настройки сохранены');
-        });
-    }
-});
-
-// Создаем обработчик для каждого ползунка
-function createEqHandler(index) {
-    return function(e) {
-        const val = parseFloat(e.target.value);
-        eqSettings[index] = val;
-        eqValues[index].textContent = val.toFixed(1) + ' dB';
-        updateEQ();
-    };
-}
-
-// Функция настройки эквалайзера для текущего аудио
-function setupEQForCurrentAudio() {
-    if (!audioContext) {
-        try {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            source = audioContext.createMediaElementSource(audio);
-            
-            // Создаем фильтры для каждой полосы
-            filters = [];
-            for (let i = 0; i < eqFrequencies.length; i++) {
-                const filter = audioContext.createBiquadFilter();
-                filter.type = 'peaking';
-                filter.frequency.value = eqFrequencies[i];
-                filter.Q.value = 1;
-                filter.gain.value = eqSettings[i];
-                filters.push(filter);
-            }
-            
-            // Соединяем фильтры последовательно
-            for (let i = 0; i < filters.length - 1; i++) {
-                filters[i].connect(filters[i + 1]);
-            }
-            
-            // Подключаем эквалайзер
-            connectEQ();
-            
-            console.log('✅ Эквалайзер инициализирован');
-        } catch (e) {
-            console.error('Ошибка инициализации эквалайзера:', e);
-        }
-    } else {
-        // Если контекст уже есть, просто обновляем настройки
-        updateEQ();
-    }
-}
-
-// Подключение эквалайзера к аудио
-function connectEQ() {
-    if (!audioContext || !source || !filters.length) return;
-    
-    try {
-        // Отключаем предыдущие соединения
-        source.disconnect();
-        
-        if (eqEnabled && filters.length > 0) {
-            // Подключаем через эквалайзер
-            source.connect(filters[0]);
-            filters[filters.length - 1].connect(audioContext.destination);
-            console.log('✅ Эквалайзер подключен');
-        } else {
-            // Подключаем напрямую
-            source.connect(audioContext.destination);
-            console.log('🔊 Прямое подключение');
-        }
-    } catch (e) {
-        console.error('Ошибка подключения эквалайзера:', e);
-    }
-}
-
-// Обновление настроек эквалайзера
-function updateEQ() {
-    if (!filters.length) return;
-    
-    for (let i = 0; i < filters.length; i++) {
-        filters[i].gain.value = eqSettings[i];
-    }
-    
-    // Сохраняем настройки
-    localStorage.setItem('eqSettings', JSON.stringify(eqSettings));
-}
-
-// Применение пресета
-function applyPreset(presetName) {
-    const preset = eqPresets[presetName];
-    if (!preset) return;
-    
-    for (let i = 0; i < preset.length; i++) {
-        eqSettings[i] = preset[i];
-        if (eqSliders[i]) {
-            eqSliders[i].value = preset[i];
-            eqValues[i].textContent = preset[i].toFixed(1) + ' dB';
-        }
-    }
-    
-    updateEQ();
-}
-
-// Сброс эквалайзера
-function resetEQ() {
-    for (let i = 0; i < eqSettings.length; i++) {
-        eqSettings[i] = 0;
-        if (eqSliders[i]) {
-            eqSliders[i].value = 0;
-            eqValues[i].textContent = '0.0 dB';
-        }
-    }
-    updateEQ();
-}
-
-// Загрузка сохраненных настроек
-function loadEQSettings() {
-    const saved = localStorage.getItem('eqSettings');
-    if (saved) {
-        try {
-            const settings = JSON.parse(saved);
-            if (settings.length === eqSettings.length) {
-                eqSettings = settings;
-                for (let i = 0; i < eqSettings.length; i++) {
-                    if (eqSliders[i]) {
-                        eqSliders[i].value = eqSettings[i];
-                        eqValues[i].textContent = eqSettings[i].toFixed(1) + ' dB';
-                    }
-                }
-                updateEQ();
-            }
-        } catch (e) {
-            console.error('Ошибка загрузки настроек EQ:', e);
-        }
-    }
-}
-
-// Добавляем обработчик на аудио для инициализации при первом воспроизведении
-audio.addEventListener('play', function onFirstPlay() {
-    if (!audioContext) {
-        setupEQForCurrentAudio();
-    }
-    audio.removeEventListener('play', onFirstPlay);
-});
 
 // Очистка временных ссылок при закрытии страницы
 window.addEventListener('beforeunload', () => {
