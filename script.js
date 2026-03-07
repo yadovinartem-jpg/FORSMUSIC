@@ -535,4 +535,78 @@ audio.addEventListener('ended', () => {
     const nextIndex = getNextTrackIndex();
     
     if (nextIndex !== -1) {
-        play
+        playTrack(nextIndex);
+    } else {
+        isPlaying = false;
+        playPauseBtn.textContent = '▶️ Play';
+        currentTrackIndex = -1;
+        if (progressBar) progressBar.value = 0;
+        if (timeDisplay) timeDisplay.textContent = '0:00 / 0:00';
+        updatePlaylist();
+    }
+});
+
+audio.addEventListener('loadedmetadata', () => {
+    if (timeDisplay) {
+        timeDisplay.textContent = `0:00 / ${formatTime(audio.duration)}`;
+    }
+});
+
+// ========== ОБРАБОТЧИКИ ==========
+if (playPauseBtn) {
+    playPauseBtn.addEventListener('click', togglePlay);
+}
+
+if (progressBar) {
+    progressBar.addEventListener('input', () => {
+        if (audio.duration && !isNaN(audio.duration)) {
+            audio.currentTime = (progressBar.value / 100) * audio.duration;
+        }
+    });
+}
+
+// ========== ЭКВАЛАЙЗЕР - ОБРАБОТЧИКИ ==========
+if (toggleEqBtn && eqControls) {
+    toggleEqBtn.addEventListener('click', () => {
+        eqControls.classList.toggle('hidden');
+        toggleEqBtn.textContent = eqControls.classList.contains('hidden') ? 
+            'Показать эквалайзер' : 'Скрыть эквалайзер';
+    });
+}
+
+if (applyMyPresetBtn) {
+    applyMyPresetBtn.addEventListener('click', applyMyPreset);
+}
+
+if (resetEqBtn) {
+    resetEqBtn.addEventListener('click', resetEQ);
+}
+
+if (saveEqBtn) {
+    saveEqBtn.addEventListener('click', () => {
+        localStorage.setItem('eqSettings', JSON.stringify(eqSettings));
+        tg.showAlert('Настройки сохранены');
+    });
+}
+
+// ========== ИНИЦИАЛИЗАЦИЯ ==========
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM загружен, инициализация...');
+    
+    initVolume();
+    loadEQSettings();
+    initEQSliders();
+    updateModeButtons();
+    
+    tg.ready();
+    console.log('✅ Приложение готово');
+});
+
+// Очистка временных ссылок
+window.addEventListener('beforeunload', () => {
+    tracks.forEach(track => {
+        if (track.url && track.url.startsWith('blob:')) {
+            URL.revokeObjectURL(track.url);
+        }
+    });
+});
