@@ -45,18 +45,8 @@
             <div id="eqControls" class="eq-controls hidden">
                 <!-- Управление шириной полос (Q-фактор) -->
                 <div class="eq-q-control">
-                    <label>Ширина полос (Q-фактор):</label>
-                    <div class="q-input-group">
-                        <input type="range" id="qSlider" min="0.5" max="10" value="1.0" step="0.1">
-                        <input type="number" id="qValue" min="0.5" max="10" value="1.0" step="0.1">
-                        <select id="qPreset">
-                            <option value="0.7">🎸 Рок (0.7)</option>
-                            <option value="1.0" selected>🎤 Стандарт (1.0)</option>
-                            <option value="1.4">🎻 Классика (1.4)</option>
-                            <option value="2.0">🔊 Узкие (2.0)</option>
-                            <option value="0.5">🌊 Широкие (0.5)</option>
-                        </select>
-                    </div>
+                    <label>Ширина полос (Q-фактор): <span id="qValue">1.0</span></label>
+                    <input type="range" id="qSlider" min="0.5" max="10" value="1.0" step="0.1">
                 </div>
                 
                 <div class="eq-presets">
