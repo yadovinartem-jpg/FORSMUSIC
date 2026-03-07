@@ -12,6 +12,11 @@ const trackTitle = document.getElementById('trackTitle');
 const trackArtist = document.getElementById('trackArtist');
 const addTrackBtn = document.getElementById('addTrackBtn');
 
+// Элементы громкости
+const volumeSlider = document.getElementById('volumeSlider');
+const volumeIcon = document.getElementById('volumeIcon');
+const volumePercent = document.getElementById('volumePercent');
+
 // ЗАГРУЗКА ФАЙЛОВ С КОМПЬЮТЕРА - отладка
 console.log('Скрипт загружен, ищем элементы...');
 
@@ -92,6 +97,41 @@ if (!uploadBtn) {
 
 // Аудио элемент
 const audio = new Audio();
+
+// Загружаем сохраненную громкость
+const savedVolume = localStorage.getItem('volume');
+if (savedVolume !== null) {
+    audio.volume = savedVolume / 100;
+    volumeSlider.value = savedVolume;
+    volumePercent.textContent = savedVolume + '%';
+    updateVolumeIcon(savedVolume);
+} else {
+    audio.volume = 0.7; // 70% по умолчанию
+    volumeSlider.value = 70;
+    volumePercent.textContent = '70%';
+}
+
+// Функция обновления иконки громкости
+function updateVolumeIcon(volume) {
+    if (volume == 0) {
+        volumeIcon.textContent = '🔇';
+    } else if (volume < 30) {
+        volumeIcon.textContent = '🔈';
+    } else if (volume < 70) {
+        volumeIcon.textContent = '🔉';
+    } else {
+        volumeIcon.textContent = '🔊';
+    }
+}
+
+// Обработчик изменения громкости
+volumeSlider.addEventListener('input', (e) => {
+    const volume = e.target.value;
+    audio.volume = volume / 100;
+    volumePercent.textContent = volume + '%';
+    updateVolumeIcon(volume);
+    localStorage.setItem('volume', volume);
+});
 
 // Состояние плеера
 let isPlaying = false;
