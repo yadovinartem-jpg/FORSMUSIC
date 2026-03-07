@@ -57,6 +57,58 @@ h1 {
     text-align: center;
     color: var(--tg-theme-hint-color, #999);
     font-size: 14px;
+    margin-bottom: 15px;
+}
+
+/* Стили для регулятора громкости */
+.volume-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--tg-theme-hint-color, #eee);
+}
+
+#volumeIcon {
+    font-size: 20px;
+    width: 40px;
+    text-align: center;
+}
+
+#volumeSlider {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    background: linear-gradient(to right, #4CAF50, #ffd700, #ff4d4d);
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+#volumeSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--tg-theme-button-color, #2481cc);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+#volumeSlider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--tg-theme-button-color, #2481cc);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+#volumePercent {
+    width: 45px;
+    text-align: right;
+    color: var(--tg-theme-text-color, #222);
+    font-weight: 600;
 }
 
 .playlist, .add-track, .upload-section, .equalizer-section {
