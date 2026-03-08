@@ -336,7 +336,7 @@ h2, h3 {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.7);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -349,14 +349,15 @@ h2, h3 {
 }
 
 .modal-content {
-    background: white;
+    background: #000000;
     padding: 20px;
     border-radius: 12px;
     width: 90%;
     max-width: 500px;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border: 1px solid #32007d;
 }
 
 .modal-content input {
@@ -366,6 +367,12 @@ h2, h3 {
     border: 2px solid #32007d;
     border-radius: 8px;
     font-size: 16px;
+    background: #222;
+    color: white;
+}
+
+.modal-content input::placeholder {
+    color: #999;
 }
 
 .modal-buttons {
@@ -411,14 +418,14 @@ h2, h3 {
 
 .modal-header h3 {
     margin: 0;
-    color: #32007d;
+    color: #ffffff;
 }
 
 .close-btn {
     background: none;
     border: none;
     font-size: 24px;
-    color: #666;
+    color: #ffffff;
     cursor: pointer;
     width: 30px;
     height: 30px;
@@ -430,7 +437,7 @@ h2, h3 {
 }
 
 .close-btn:hover {
-    background: #f0f0f0;
+    background: #333;
     color: #f44336;
     transform: scale(1.1);
 }
@@ -453,7 +460,7 @@ h2, h3 {
     border-radius: 12px;
     margin-bottom: 10px;
     background: linear-gradient(135deg, #32007d, #000000);
-    box-shadow: 0 4px 12px rgba(50, 0, 125, 0.3);
+    box-shadow: 0 4px 12px rgba(50, 0, 125, 0.5);
 }
 
 .small-btn {
@@ -472,55 +479,29 @@ h2, h3 {
     transform: scale(1.05);
 }
 
-.playlist-actions {
-    display: flex;
-    gap: 10px;
-    margin: 15px 0;
-}
-
-.action-btn {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.3s;
-    background: #4a1a9e;
-    color: white;
-}
-
-.action-btn.delete {
-    background: #f44336;
-}
-
-.action-btn:hover {
-    opacity: 0.9;
-    transform: scale(1.02);
-}
-
 .playlist-tracks, .available-tracks {
     max-height: 250px;
     overflow-y: auto;
-    border: 1px solid #ddd;
+    border: 1px solid #333;
     border-radius: 8px;
     margin-bottom: 15px;
-    background: #f9f9f9;
+    background: #111;
 }
 
 /* Стили для треков с мини-обложкой */
 .track-item {
     padding: 8px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #333;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 10px;
     transition: background 0.2s;
+    background: #000000;
 }
 
 .track-item:hover {
-    background: #f0f0f0;
+    background: #1a1a1a;
 }
 
 .track-mini-cover {
@@ -534,19 +515,23 @@ h2, h3 {
 .track-info {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .track-title {
     font-weight: 600;
     font-size: 14px;
+    color: #ffffff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-bottom: 2px;
 }
 
 .track-artist {
-    font-size: 12px;
-    color: #666;
+    font-size: 11px;
+    color: #b0b0b0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -555,7 +540,7 @@ h2, h3 {
 .track-remove-btn {
     background: none;
     border: none;
-    color: #333;
+    color: #ffffff;
     font-size: 18px;
     cursor: pointer;
     width: 30px;
@@ -599,11 +584,13 @@ h2, h3 {
     border-radius: 8px;
     font-size: 14px;
     transition: all 0.3s;
+    background: #222;
+    color: white;
 }
 
 #playlistEditName:focus, #playlistEditAuthor:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(50, 0, 125, 0.2);
+    box-shadow: 0 0 0 3px rgba(50, 0, 125, 0.5);
 }
 
 .clear-btn {
@@ -933,7 +920,7 @@ h2, h3 {
 }
 
 ::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: #333;
     border-radius: 10px;
 }
 
