@@ -10,6 +10,12 @@ const progressBar = document.getElementById('progressBar');
 const timeDisplay = document.getElementById('timeDisplay');
 const playlist = document.getElementById('playlist');
 const clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
+const likeBtn = document.getElementById('likeBtn');
+
+// Элементы обложки
+const albumArt = document.getElementById('albumArt');
+const currentTrackTitle = document.getElementById('currentTrackTitle');
+const currentTrackArtist = document.getElementById('currentTrackArtist');
 
 // Элементы громкости
 const volumeSlider = document.getElementById('volumeSlider');
@@ -24,9 +30,32 @@ const shuffleBtn = document.getElementById('shuffleBtn');
 const fileInput = document.getElementById('fileInput');
 const uploadBtn = document.getElementById('uploadBtn');
 
-// Элементы эквалайзера - Q фактор
+// Элементы навигации по библиотеке
+const showPlaylistsBtn = document.getElementById('showPlaylistsBtn');
+const showFavoritesBtn = document.getElementById('showFavoritesBtn');
+const showAllTracksBtn = document.getElementById('showAllTracksBtn');
+const playlistsSection = document.getElementById('playlistsSection');
+const favoritesSection = document.getElementById('favoritesSection');
+const allTracksSection = document.getElementById('allTracksSection');
+
+// Элементы для плейлистов
+const createPlaylistBtn = document.getElementById('createPlaylistBtn');
+const playlistModal = document.getElementById('playlistModal');
+const playlistName = document.getElementById('playlistName');
+const playlistAuthor = document.getElementById('playlistAuthor');
+const savePlaylistBtn = document.getElementById('savePlaylistBtn');
+const cancelPlaylistBtn = document.getElementById('cancelPlaylistBtn');
+const playlistsContainer = document.getElementById('playlistsContainer');
+const favoritesList = document.getElementById('favoritesList');
+
+// Элементы эквалайзера
 const qSlider = document.getElementById('qSlider');
 const qValue = document.getElementById('qValue');
+const toggleEqBtn = document.getElementById('toggleEqBtn');
+const eqControls = document.getElementById('eqControls');
+const applyMyPresetBtn = document.getElementById('applyMyPresetBtn');
+const resetEqBtn = document.getElementById('resetEqBtn');
+const saveEqBtn = document.getElementById('saveEqBtn');
 
 // Аудио элемент
 const audio = new Audio();
@@ -36,6 +65,12 @@ let isPlaying = false;
 let currentTrackIndex = -1;
 let tracks = [];
 
+// Избранное
+let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+
+// Плейлисты
+let playlists = JSON.parse(localStorage.getItem('playlists')) || [];
+
 // Режимы повтора: 0 - нет повтора, 1 - повтор всего плейлиста, 2 - повтор одного трека
 let repeatMode = 0;
 let shuffleMode = false;
@@ -44,6 +79,8 @@ let shuffledIndices = [];
 // ========== ОЧИСТКА ПРИ ЗАГРУЗКЕ ==========
 tracks = [];
 updatePlaylist();
+updateFavoritesList();
+updatePlaylistsContainer();
 
 // ========== ГРОМКОСТЬ ==========
 function initVolume() {
@@ -77,6 +114,201 @@ function updateVolumeIcon(volume) {
     else if (volume < 70) volumeIcon.textContent = '🔉';
     else volumeIcon.textContent = '🔊';
 }
+
+// ========== ФУНКЦИИ ДЛЯ ОБЛОЖКИ ==========
+async function fetchAlbumArt(artist, title) {
+    // Здесь будет запрос к Genius API
+    // Пока возвращаем заглушку
+    return `https://via.placeholder.com/300x300/32007d/ffffff?text=${encodeURIComponent(title)}`;
+}
+
+async function updateAlbumArt() {
+    if (currentTrackIndex >= 0 && tracks[currentTrackIndex]) {
+        const track = tracks[currentTrackIndex];
+        currentTrackTitle.textContent = track.title || 'Без названия';
+        currentTrackArtist.textContent = track.artist || 'Неизвестный исполнитель';
+        
+        // Загружаем обложку
+        const artUrl = await fetchAlbumArt(track.artist, track.title);
+        albumArt.src = artUrl;
+        
+        // Обновляем иконку лайка
+        updateLikeButton();
+    } else {
+        currentTrackTitle.textContent = 'Нет трека';
+        currentTrackArtist.textContent = '';
+        albumArt.src = 'https://via.placeholder.com/300x300/32007d/ffffff?text=FOR+SITY';
+    }
+}
+
+// ========== ФУНКЦИИ ДЛЯ ИЗБРАННОГО ==========
+function toggleLike() {
+    if (currentTrackIndex >= 0 && tracks[currentTrackIndex]) {
+        const track = tracks[currentTrackIndex];
+        const trackId = `${track.artist}-${track.title}`;
+        
+        const index = favorites.findIndex(f => f.id === trackId);
+        if (index === -1) {
+            favorites.push({
+                id: trackId,
+                ...track
+            });
+            likeBtn.textContent = '❤️';
+            likeBtn.classList.add('active');
+        } else {
+            favorites.splice(index, 1);
+            likeBtn.textContent = '🤍';
+            likeBtn.classList.remove('active');
+        }
+        
+        localStorage.setItem('favorites', JSON.stringify(favorites));
+        updateFavoritesList();
+    }
+}
+
+function updateLikeButton() {
+    if (currentTrackIndex >= 0 && tracks[currentTrackIndex]) {
+        const track = tracks[currentTrackIndex];
+        const trackId = `${track.artist}-${track.title}`;
+        const isLiked = favorites.some(f => f.id === trackId);
+        
+        likeBtn.textContent = isLiked ? '❤️' : '🤍';
+        likeBtn.classList.toggle('active', isLiked);
+    }
+}
+
+function updateFavoritesList() {
+    if (!favoritesList) return;
+    favoritesList.innerHTML = '';
+    
+    favorites.forEach((track, index) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <div class="track-info">
+                <span class="track-title">${track.title || 'Без названия'}</span>
+                <span class="track-artist">${track.artist || 'Неизвестный исполнитель'}</span>
+            </div>
+            <span class="like-icon active" onclick="removeFromFavorites('${track.id}')">❤️</span>
+        `;
+        li.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('like-icon')) {
+                // Ищем трек в основном списке
+                const trackIndex = tracks.findIndex(t => 
+                    t.artist === track.artist && t.title === track.title
+                );
+                if (trackIndex !== -1) {
+                    playTrack(trackIndex);
+                }
+            }
+        });
+        favoritesList.appendChild(li);
+    });
+}
+
+// Глобальная функция для удаления из избранного
+window.removeFromFavorites = function(trackId) {
+    favorites = favorites.filter(f => f.id !== trackId);
+    localStorage.setItem('favorites', JSON.stringify(favorites));
+    updateFavoritesList();
+    updateLikeButton();
+};
+
+// ========== ФУНКЦИИ ДЛЯ ПЛЕЙЛИСТОВ ==========
+function createPlaylist(name, author) {
+    const newPlaylist = {
+        id: Date.now().toString(),
+        name: name,
+        author: author,
+        tracks: [],
+        createdAt: new Date().toISOString()
+    };
+    
+    playlists.push(newPlaylist);
+    localStorage.setItem('playlists', JSON.stringify(playlists));
+    updatePlaylistsContainer();
+}
+
+function updatePlaylistsContainer() {
+    if (!playlistsContainer) return;
+    playlistsContainer.innerHTML = '';
+    
+    playlists.forEach(playlist => {
+        const div = document.createElement('div');
+        div.className = 'playlist-item';
+        div.innerHTML = `
+            <h4>${playlist.name}</h4>
+            <p>Создал: ${playlist.author}</p>
+            <p>Треков: ${playlist.tracks.length}</p>
+        `;
+        div.addEventListener('click', () => openPlaylist(playlist.id));
+        playlistsContainer.appendChild(div);
+    });
+}
+
+function openPlaylist(playlistId) {
+    const playlist = playlists.find(p => p.id === playlistId);
+    if (playlist) {
+        // TODO: показать треки плейлиста
+        tg.showAlert(`Плейлист "${playlist.name}" (в разработке)`);
+    }
+}
+
+// ========== НАВИГАЦИЯ ПО БИБЛИОТЕКЕ ==========
+showPlaylistsBtn.addEventListener('click', () => {
+    showPlaylistsBtn.classList.add('active');
+    showFavoritesBtn.classList.remove('active');
+    showAllTracksBtn.classList.remove('active');
+    
+    playlistsSection.classList.remove('hidden');
+    favoritesSection.classList.add('hidden');
+    allTracksSection.classList.add('hidden');
+});
+
+showFavoritesBtn.addEventListener('click', () => {
+    showFavoritesBtn.classList.add('active');
+    showPlaylistsBtn.classList.remove('active');
+    showAllTracksBtn.classList.remove('active');
+    
+    favoritesSection.classList.remove('hidden');
+    playlistsSection.classList.add('hidden');
+    allTracksSection.classList.add('hidden');
+});
+
+showAllTracksBtn.addEventListener('click', () => {
+    showAllTracksBtn.classList.add('active');
+    showPlaylistsBtn.classList.remove('active');
+    showFavoritesBtn.classList.remove('active');
+    
+    allTracksSection.classList.remove('hidden');
+    playlistsSection.classList.add('hidden');
+    favoritesSection.classList.add('hidden');
+});
+
+// ========== МОДАЛЬНОЕ ОКНО ПЛЕЙЛИСТА ==========
+createPlaylistBtn.addEventListener('click', () => {
+    playlistModal.classList.remove('hidden');
+});
+
+cancelPlaylistBtn.addEventListener('click', () => {
+    playlistModal.classList.add('hidden');
+    playlistName.value = '';
+    playlistAuthor.value = '';
+});
+
+savePlaylistBtn.addEventListener('click', () => {
+    const name = playlistName.value.trim();
+    const author = playlistAuthor.value.trim();
+    
+    if (name && author) {
+        createPlaylist(name, author);
+        playlistModal.classList.add('hidden');
+        playlistName.value = '';
+        playlistAuthor.value = '';
+        tg.showAlert('Плейлист создан!');
+    } else {
+        tg.showAlert('Заполните все поля!');
+    }
+});
 
 // ========== ФУНКЦИИ ПЛЕЕРА ==========
 function updatePlaylist() {
@@ -181,6 +413,7 @@ function playTrack(index) {
             isPlaying = true;
             playPauseBtn.textContent = '⏸️';
             updatePlaylist();
+            updateAlbumArt(); // Обновляем обложку
             
             if (!isEQInitialized) {
                 setTimeout(() => {
@@ -304,12 +537,6 @@ let eqSettings = {
 
 let currentQ = 1.0;
 
-const toggleEqBtn = document.getElementById('toggleEqBtn');
-const eqControls = document.getElementById('eqControls');
-const applyMyPresetBtn = document.getElementById('applyMyPresetBtn');
-const resetEqBtn = document.getElementById('resetEqBtn');
-const saveEqBtn = document.getElementById('saveEqBtn');
-
 function initEQ() {
     if (isEQInitialized) return;
     
@@ -362,7 +589,6 @@ function updateEQ() {
 }
 
 function updateQ(value) {
-    // Инвертируем значение: чем правее ползунок, тем больше значение
     currentQ = parseFloat(value);
     if (qSlider) qSlider.value = currentQ;
     if (qValue) qValue.textContent = currentQ.toFixed(1);
@@ -503,6 +729,7 @@ if (clearPlaylistBtn) {
         audio.pause();
         playPauseBtn.textContent = '▶️';
         updatePlaylist();
+        updateAlbumArt();
         tg.showAlert('Плейлист очищен');
     });
 }
@@ -527,6 +754,11 @@ if (shuffleBtn) {
         updateModeButtons();
         tg.showAlert(shuffleMode ? '🔀 Перемешивание включено' : '🔀 Перемешивание выключено');
     });
+}
+
+// ========== ЛАЙК ==========
+if (likeBtn) {
+    likeBtn.addEventListener('click', toggleLike);
 }
 
 // ========== НАВИГАЦИЯ ПО ТРЕКАМ ==========
@@ -568,6 +800,7 @@ audio.addEventListener('ended', () => {
         if (progressBar) progressBar.value = 0;
         if (timeDisplay) timeDisplay.textContent = '0:00 / 0:00';
         updatePlaylist();
+        updateAlbumArt();
     }
 });
 
@@ -620,6 +853,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadEQSettings();
     initEQSliders();
     updateModeButtons();
+    updateAlbumArt();
     
     tg.ready();
 });
