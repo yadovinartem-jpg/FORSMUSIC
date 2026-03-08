@@ -1,31 +1,23 @@
-// Определяем окружение
-const isTelegram = window.Telegram && window.Telegram.WebApp;
-const tg = isTelegram ? window.Telegram.WebApp : null;
+// Инициализация Telegram Web App
+const tg = window.Telegram.WebApp;
+tg.expand();
 
-if (tg) {
-    tg.expand();
-    console.log('Запущено в Telegram, версия:', tg.version);
-} else {
-    console.log('Запущено в браузере');
-}
+// Версия Telegram Web App
+console.log('Telegram WebApp version:', tg.version);
 
 // Универсальная функция показа уведомлений
 function showNotification(message) {
-    if (tg) {
-        // В Telegram используем showAlert если доступно
-        if (typeof tg.showAlert === 'function') {
-            tg.showAlert(message);
-        } else if (typeof tg.showPopup === 'function') {
-            tg.showPopup({
-                title: 'FORSITY MUSIC',
-                message: message,
-                buttons: [{ type: 'ok' }]
-            });
-        } else {
-            alert(message);
-        }
+    // Пробуем разные методы в зависимости от версии
+    if (typeof tg.showAlert === 'function') {
+        tg.showAlert(message);
+    } else if (typeof tg.showPopup === 'function') {
+        tg.showPopup({
+            title: 'FORSITY MUSIC',
+            message: message,
+            buttons: [{ type: 'ok' }]
+        });
     } else {
-        // В браузере используем обычный alert
+        // Если ничего не работает, используем alert
         alert(message);
     }
 }
@@ -40,7 +32,7 @@ const playlist = document.getElementById('playlist');
 const clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
 const likeBtn = document.getElementById('likeBtn');
 
-// Элементы обложки
+// Элементы обложки - заменили img на canvas для рисования
 const albumArt = document.getElementById('albumArt');
 const ctx = albumArt.getContext('2d');
 const currentTrackTitle = document.getElementById('currentTrackTitle');
@@ -146,9 +138,6 @@ function updateVolumeIcon(volume) {
 
 // ========== ФУНКЦИИ ДЛЯ РИСОВАНИЯ ОБЛОЖКИ ==========
 function drawGradientAlbumArt(text = 'FOR SITY') {
-    // Очищаем canvas
-    ctx.clearRect(0, 0, 300, 300);
-    
     // Рисуем градиентный фон
     const gradient = ctx.createLinearGradient(0, 0, 300, 300);
     gradient.addColorStop(0, '#32007d');
@@ -174,7 +163,6 @@ function drawGradientAlbumArt(text = 'FOR SITY') {
 
 // Рисование обложки из изображения
 function drawImageAlbumArt(img) {
-    ctx.clearRect(0, 0, 300, 300);
     ctx.drawImage(img, 0, 0, 300, 300);
 }
 
@@ -246,7 +234,7 @@ async function extractAlbumArt(file) {
     }
 }
 
-// Обновление обложки
+// Обновление обложки (теперь используем canvas)
 function updateAlbumArt(track) {
     if (track && track.albumArt) {
         // Если есть обложка, загружаем её
@@ -330,8 +318,6 @@ function updateFavoritesList() {
                 );
                 if (trackIndex !== -1) {
                     playTrack(trackIndex);
-                } else {
-                    showNotification('Трек не найден в основном списке');
                 }
             }
         });
@@ -1009,9 +995,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initEQSliders();
     updateModeButtons();
     
-    if (tg) {
-        tg.ready();
-    }
+    tg.ready();
 });
 
 // Очистка временных ссылок при закрытии
