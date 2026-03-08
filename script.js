@@ -106,7 +106,7 @@ updatePlaylistsContainer();
 // ========== ГРОМКОСТЬ ==========
 function initVolume() {
     const savedVolume = localStorage.getItem('volume');
-    let startVolume = 70;
+    let startVolume = 60;
     
     if (savedVolume !== null) {
         startVolume = parseInt(savedVolume);
