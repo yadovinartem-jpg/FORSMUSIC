@@ -191,7 +191,10 @@
         <!-- Мини-окно управления плейлистом -->
         <div id="playlistDetailModal" class="modal hidden">
             <div class="modal-content playlist-detail">
-                <h3 id="playlistDetailTitle">Управление плейлистом</h3>
+                <div class="modal-header">
+                    <h3 id="playlistDetailTitle">Управление плейлистом</h3>
+                    <button id="closePlaylistDetailBtn" class="close-btn">✕</button>
+                </div>
                 
                 <!-- Обложка плейлиста -->
                 <div class="playlist-cover-container">
@@ -216,10 +219,6 @@
                 <h4>Добавить треки из общего списка:</h4>
                 <div id="availableTracks" class="available-tracks">
                     <!-- Доступные треки -->
-                </div>
-                
-                <div class="modal-buttons">
-                    <button id="closePlaylistDetailBtn">Закрыть</button>
                 </div>
             </div>
         </div>
