@@ -834,6 +834,7 @@ let filters = [];
 let isEQInitialized = false;
 
 const idByFrequency = {
+    16: 'eq16',
     32: 'eq32',
     64: 'eq64',
     125: 'eq125',
@@ -843,12 +844,14 @@ const idByFrequency = {
     2000: 'eq2k',
     4000: 'eq4k',
     8000: 'eq8k',
-    16000: 'eq16k'
+    16000: 'eq16k',
+    22000: 'eq22k'
 };
 
-const frequencies = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+const frequencies = [16, 32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000, 22000];
 
 const myPreset = {
+    16: 12,
     32: 12,
     64: 12,
     125: 9,
@@ -858,10 +861,12 @@ const myPreset = {
     2000: 2,
     4000: -1,
     8000: 1,
-    16000: 1
+    16000: 1,
+    22000: -2
 };
 
 let eqSettings = {
+    16: 0,
     32: 0,
     64: 0,
     125: 0,
@@ -871,7 +876,8 @@ let eqSettings = {
     2000: 0,
     4000: 0,
     8000: 0,
-    16000: 0
+    16000: 0,
+    22000: 0
 };
 
 let currentQ = 2.5;
@@ -910,7 +916,7 @@ function initEQ() {
         filters[filters.length - 1].connect(audioContext.destination);
         
         isEQInitialized = true;
-        console.log('✅ Эквалайзер инициализирован');
+        console.log('✅ Эквалайзер инициализирован с частотами:', frequencies);
     } catch (e) {
         console.error('Ошибка инициализации эквалайзера:', e);
     }
@@ -1022,6 +1028,8 @@ function initEQSliders() {
                     }
                 }
             });
+        } else {
+            console.warn(`Ползунок для частоты ${freq} (id: ${id}) не найден`);
         }
     }
 }
