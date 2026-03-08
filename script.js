@@ -115,29 +115,103 @@ function updateVolumeIcon(volume) {
     else volumeIcon.textContent = '🔊';
 }
 
-// ========== ФУНКЦИИ ДЛЯ ОБЛОЖКИ ==========
-async function fetchAlbumArt(artist, title) {
-    // Здесь будет запрос к Genius API
-    // Пока возвращаем заглушку
-    return `https://via.placeholder.com/300x300/32007d/ffffff?text=${encodeURIComponent(title)}`;
+// ========== ФУНКЦИИ ДЛЯ ИЗВЛЕЧЕНИЯ ОБЛОЖКИ ИЗ MP3 ==========
+function extractAlbumArt(file) {
+    return new Promise((resolve) => {
+        // Создаем ссылку на файл
+        const url = URL.createObjectURL(file);
+        
+        // Создаем аудио элемент для чтения метаданных
+        const tempAudio = new Audio();
+        tempAudio.src = url;
+        
+        // Пытаемся получить обложку через API
+        if ('metadata' in tempAudio) {
+            tempAudio.addEventListener('loadedmetadata', () => {
+                // Проверяем, есть ли обложка
+                const video = document.createElement('video');
+                video.src = url;
+                video.addEventListener('loadeddata', () => {
+                    if (video.videoWidth > 0) {
+                        // Если есть видео (обложка), создаем canvas для извлечения
+                        const canvas = document.createElement('canvas');
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const imageUrl = canvas.toDataURL('image/jpeg');
+                        URL.revokeObjectURL(url);
+                        resolve(imageUrl);
+                    } else {
+                        URL.revokeObjectURL(url);
+                        resolve(null);
+                    }
+                });
+                
+                video.addEventListener('error', () => {
+                    URL.revokeObjectURL(url);
+                    resolve(null);
+                });
+            });
+            
+            tempAudio.addEventListener('error', () => {
+                URL.revokeObjectURL(url);
+                resolve(null);
+            });
+        } else {
+            // Если API не поддерживается, пробуем через jsmediatags
+            if (window.jsmediatags) {
+                jsmediatags.read(file, {
+                    onSuccess: (tag) => {
+                        if (tag.tags.picture) {
+                            const picture = tag.tags.picture;
+                            const base64String = arrayBufferToBase64(picture.data);
+                            const imageUrl = `data:${picture.format};base64,${base64String}`;
+                            URL.revokeObjectURL(url);
+                            resolve(imageUrl);
+                        } else {
+                            URL.revokeObjectURL(url);
+                            resolve(null);
+                        }
+                    },
+                    onError: () => {
+                        URL.revokeObjectURL(url);
+                        resolve(null);
+                    }
+                });
+            } else {
+                URL.revokeObjectURL(url);
+                resolve(null);
+            }
+        }
+    });
 }
 
-async function updateAlbumArt() {
-    if (currentTrackIndex >= 0 && tracks[currentTrackIndex]) {
-        const track = tracks[currentTrackIndex];
+// Вспомогательная функция для конвертации ArrayBuffer в Base64
+function arrayBufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+}
+
+// Обновление обложки
+function updateAlbumArt(track) {
+    if (track && track.albumArt) {
+        albumArt.src = track.albumArt;
+    } else {
+        // Если нет обложки, показываем заглушку
+        albumArt.src = 'https://via.placeholder.com/300x300/32007d/ffffff?text=FOR+SITY';
+    }
+    
+    if (track) {
         currentTrackTitle.textContent = track.title || 'Без названия';
         currentTrackArtist.textContent = track.artist || 'Неизвестный исполнитель';
-        
-        // Загружаем обложку
-        const artUrl = await fetchAlbumArt(track.artist, track.title);
-        albumArt.src = artUrl;
-        
-        // Обновляем иконку лайка
-        updateLikeButton();
     } else {
         currentTrackTitle.textContent = 'Нет трека';
         currentTrackArtist.textContent = '';
-        albumArt.src = 'https://via.placeholder.com/300x300/32007d/ffffff?text=FOR+SITY';
     }
 }
 
@@ -248,7 +322,6 @@ function updatePlaylistsContainer() {
 function openPlaylist(playlistId) {
     const playlist = playlists.find(p => p.id === playlistId);
     if (playlist) {
-        // TODO: показать треки плейлиста
         tg.showAlert(`Плейлист "${playlist.name}" (в разработке)`);
     }
 }
@@ -413,7 +486,8 @@ function playTrack(index) {
             isPlaying = true;
             playPauseBtn.textContent = '⏸️';
             updatePlaylist();
-            updateAlbumArt(); // Обновляем обложку
+            updateAlbumArt(tracks[currentTrackIndex]); // Обновляем обложку
+            updateLikeButton();
             
             if (!isEQInitialized) {
                 setTimeout(() => {
@@ -571,6 +645,7 @@ function initEQ() {
         filters[filters.length - 1].connect(audioContext.destination);
         
         isEQInitialized = true;
+        console.log('✅ Эквалайзер инициализирован');
     } catch (e) {
         console.error('Ошибка инициализации эквалайзера:', e);
     }
@@ -688,7 +763,7 @@ function initEQSliders() {
 
 // ========== ЗАГРУЗКА ФАЙЛОВ ==========
 if (uploadBtn) {
-    uploadBtn.addEventListener('click', function() {
+    uploadBtn.addEventListener('click', async function() {
         const file = fileInput.files[0];
         if (!file) {
             tg.showAlert('Выберите файл!');
@@ -704,10 +779,14 @@ if (uploadBtn) {
             const fileUrl = URL.createObjectURL(file);
             const fileName = file.name.replace('.mp3', '').replace('.MP3', '');
             
+            // Пытаемся извлечь обложку
+            const albumArtUrl = await extractAlbumArt(file);
+            
             tracks.push({
                 url: fileUrl,
                 title: fileName,
-                artist: 'Загружено с ПК'
+                artist: 'Загружено с ПК',
+                albumArt: albumArtUrl
             });
             
             updatePlaylist();
@@ -715,6 +794,7 @@ if (uploadBtn) {
             tg.showAlert('Файл загружен!');
             
         } catch (error) {
+            console.error('Ошибка загрузки:', error);
             tg.showAlert('Ошибка загрузки');
         }
     });
@@ -729,7 +809,7 @@ if (clearPlaylistBtn) {
         audio.pause();
         playPauseBtn.textContent = '▶️';
         updatePlaylist();
-        updateAlbumArt();
+        updateAlbumArt(null);
         tg.showAlert('Плейлист очищен');
     });
 }
@@ -800,7 +880,7 @@ audio.addEventListener('ended', () => {
         if (progressBar) progressBar.value = 0;
         if (timeDisplay) timeDisplay.textContent = '0:00 / 0:00';
         updatePlaylist();
-        updateAlbumArt();
+        updateAlbumArt(null);
     }
 });
 
@@ -853,7 +933,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadEQSettings();
     initEQSliders();
     updateModeButtons();
-    updateAlbumArt();
+    updateAlbumArt(null);
     
     tg.ready();
 });
