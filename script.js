@@ -122,7 +122,7 @@ updatePlaylistsContainer();
 // ========== ГРОМКОСТЬ ==========
 function initVolume() {
     const savedVolume = localStorage.getItem('volume');
-    let startVolume = 60; // Установлено 60%
+    let startVolume = 60;
     
     if (savedVolume !== null) {
         startVolume = parseInt(savedVolume);
@@ -177,7 +177,6 @@ function drawGradientAlbumArt(canvas, text = 'FOR SITY') {
     }
 }
 
-// Рисование обложки из изображения
 function drawImageAlbumArt(canvas, img) {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -373,7 +372,6 @@ function openPlaylistDetail(playlistId) {
     playlistEditName.value = playlist.name;
     playlistEditAuthor.value = playlist.author;
     
-    // Рисуем обложку плейлиста
     if (playlist.cover) {
         const img = new Image();
         img.onload = () => drawImageAlbumArt(playlistCover, img);
@@ -382,7 +380,6 @@ function openPlaylistDetail(playlistId) {
         drawGradientAlbumArt(playlistCover, playlist.name);
     }
     
-    // Отображаем треки в плейлисте
     updatePlaylistTracks();
     
     playlistDetailModal.classList.remove('hidden');
@@ -392,20 +389,59 @@ function updatePlaylistTracks() {
     const playlist = playlists.find(p => p.id === currentPlaylistId);
     if (!playlist) return;
     
-    // Отображаем треки в плейлисте
     playlistTracks.innerHTML = '';
     playlist.tracks.forEach((track, index) => {
         const trackDiv = document.createElement('div');
         trackDiv.className = 'track-item';
-        trackDiv.innerHTML = `
-            <div class="track-info">
-                <span class="track-title">${track.title}</span>
-                <span class="track-artist">${track.artist}</span>
-            </div>
-            <button class="remove-btn" onclick="removeTrackFromPlaylist('${playlist.id}', ${index})">Удалить</button>
+        
+        const miniCover = document.createElement('canvas');
+        miniCover.className = 'track-mini-cover';
+        miniCover.width = 40;
+        miniCover.height = 40;
+        
+        if (track.albumArt) {
+            const img = new Image();
+            img.onload = () => {
+                const miniCtx = miniCover.getContext('2d');
+                miniCtx.drawImage(img, 0, 0, 40, 40);
+            };
+            img.src = track.albumArt;
+        } else {
+            const miniCtx = miniCover.getContext('2d');
+            const gradient = miniCtx.createLinearGradient(0, 0, 40, 40);
+            gradient.addColorStop(0, '#32007d');
+            gradient.addColorStop(1, '#000000');
+            miniCtx.fillStyle = gradient;
+            miniCtx.fillRect(0, 0, 40, 40);
+            
+            miniCtx.fillStyle = '#ffffff';
+            miniCtx.font = 'bold 10px Arial';
+            miniCtx.textAlign = 'center';
+            miniCtx.textBaseline = 'middle';
+            miniCtx.fillText(track.title.substring(0, 2).toUpperCase(), 20, 20);
+        }
+        
+        trackDiv.appendChild(miniCover);
+        
+        const trackInfo = document.createElement('div');
+        trackInfo.className = 'track-info';
+        trackInfo.innerHTML = `
+            <span class="track-title">${track.title}</span>
+            <span class="track-artist">${track.artist}</span>
         `;
+        trackDiv.appendChild(trackInfo);
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'track-remove-btn';
+        removeBtn.innerHTML = '✕';
+        removeBtn.onclick = (e) => {
+            e.stopPropagation();
+            removeTrackFromPlaylist(playlist.id, index);
+        };
+        trackDiv.appendChild(removeBtn);
+        
         trackDiv.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('remove-btn')) {
+            if (!e.target.classList.contains('track-remove-btn')) {
                 const trackIndex = tracks.findIndex(t => t.url === track.url);
                 if (trackIndex !== -1) {
                     playTrack(trackIndex);
@@ -413,23 +449,63 @@ function updatePlaylistTracks() {
                 }
             }
         });
+        
         playlistTracks.appendChild(trackDiv);
     });
     
-    // Отображаем доступные треки
     availableTracks.innerHTML = '';
     tracks.forEach((track, index) => {
         const isInPlaylist = playlist.tracks.some(t => t.url === track.url);
         if (!isInPlaylist) {
             const trackDiv = document.createElement('div');
             trackDiv.className = 'track-item';
-            trackDiv.innerHTML = `
-                <div class="track-info">
-                    <span class="track-title">${track.title}</span>
-                    <span class="track-artist">${track.artist}</span>
-                </div>
-                <button class="add-btn" onclick="addTrackToPlaylist('${playlist.id}', ${index})">Добавить</button>
+            
+            const miniCover = document.createElement('canvas');
+            miniCover.className = 'track-mini-cover';
+            miniCover.width = 40;
+            miniCover.height = 40;
+            
+            if (track.albumArt) {
+                const img = new Image();
+                img.onload = () => {
+                    const miniCtx = miniCover.getContext('2d');
+                    miniCtx.drawImage(img, 0, 0, 40, 40);
+                };
+                img.src = track.albumArt;
+            } else {
+                const miniCtx = miniCover.getContext('2d');
+                const gradient = miniCtx.createLinearGradient(0, 0, 40, 40);
+                gradient.addColorStop(0, '#32007d');
+                gradient.addColorStop(1, '#000000');
+                miniCtx.fillStyle = gradient;
+                miniCtx.fillRect(0, 0, 40, 40);
+                
+                miniCtx.fillStyle = '#ffffff';
+                miniCtx.font = 'bold 10px Arial';
+                miniCtx.textAlign = 'center';
+                miniCtx.textBaseline = 'middle';
+                miniCtx.fillText(track.title.substring(0, 2).toUpperCase(), 20, 20);
+            }
+            
+            trackDiv.appendChild(miniCover);
+            
+            const trackInfo = document.createElement('div');
+            trackInfo.className = 'track-info';
+            trackInfo.innerHTML = `
+                <span class="track-title">${track.title}</span>
+                <span class="track-artist">${track.artist}</span>
             `;
+            trackDiv.appendChild(trackInfo);
+            
+            const addBtn = document.createElement('button');
+            addBtn.className = 'track-add-btn';
+            addBtn.textContent = 'Добавить';
+            addBtn.onclick = (e) => {
+                e.stopPropagation();
+                addTrackToPlaylist(playlist.id, index);
+            };
+            trackDiv.appendChild(addBtn);
+            
             availableTracks.appendChild(trackDiv);
         }
     });
@@ -460,7 +536,6 @@ window.removeTrackFromPlaylist = function(playlistId, trackIndex) {
     }
 };
 
-// Переименование плейлиста
 renamePlaylistBtn.addEventListener('click', () => {
     const playlist = playlists.find(p => p.id === currentPlaylistId);
     if (playlist) {
@@ -478,7 +553,6 @@ renamePlaylistBtn.addEventListener('click', () => {
     }
 });
 
-// Удаление плейлиста
 deletePlaylistBtn.addEventListener('click', () => {
     if (confirm('Удалить плейлист?')) {
         playlists = playlists.filter(p => p.id !== currentPlaylistId);
@@ -489,7 +563,6 @@ deletePlaylistBtn.addEventListener('click', () => {
     }
 });
 
-// Загрузка обложки для плейлиста
 changePlaylistCoverBtn.addEventListener('click', () => {
     coverFileInput.click();
 });
@@ -801,7 +874,7 @@ let eqSettings = {
     16000: 0
 };
 
-let currentQ = 2.5; // Установлено 2.5
+let currentQ = 2.5;
 
 function initEQ() {
     if (isEQInitialized) return;
