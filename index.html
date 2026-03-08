@@ -42,8 +42,8 @@
             <!-- Регулятор громкости -->
             <div class="volume-control">
                 <span id="volumeIcon">🔊</span>
-                <input type="range" id="volumeSlider" min="0" max="100" value="70">
-                <span id="volumePercent">70%</span>
+                <input type="range" id="volumeSlider" min="0" max="100" value="60">
+                <span id="volumePercent">60%</span>
             </div>
         </div>
 
@@ -55,8 +55,8 @@
             <div id="eqControls" class="eq-controls hidden">
                 <!-- Управление шириной полос (Q-фактор) -->
                 <div class="eq-q-control">
-                    <label>Ширина полос (Q-фактор): <span id="qValue">1.0</span></label>
-                    <input type="range" id="qSlider" min="0.5" max="10" value="1.0" step="0.1">
+                    <label>Ширина полос (Q-фактор): <span id="qValue">2.5</span></label>
+                    <input type="range" id="qSlider" min="0.5" max="10" value="2.5" step="0.1">
                 </div>
                 
                 <div class="eq-presets">
@@ -149,7 +149,7 @@
             <button id="showAllTracksBtn" class="library-btn active">🎵 Все треки</button>
         </div>
 
-        <!-- Секция плейлистов (скрыта по умолчанию) -->
+        <!-- Секция плейлистов -->
         <div id="playlistsSection" class="playlists-section hidden">
             <h2>Мои плейлисты</h2>
             <button id="createPlaylistBtn" class="create-playlist-btn">➕ Создать плейлист</button>
@@ -158,7 +158,7 @@
             </div>
         </div>
 
-        <!-- Секция избранного (скрыта по умолчанию) -->
+        <!-- Секция избранного -->
         <div id="favoritesSection" class="favorites-section hidden">
             <h2>Избранное</h2>
             <ul id="favoritesList" class="favorites-list">
@@ -168,8 +168,8 @@
 
         <!-- Основной плейлист (все треки) -->
         <div id="allTracksSection" class="playlist">
-            <h2>Плейлист</h2>
-            <button id="clearPlaylistBtn" class="clear-btn">🗑️ Очистить плейлист</button>
+            <h2>Все треки</h2>
+            <button id="clearPlaylistBtn" class="clear-btn">🗑️ Очистить все</button>
             <ul id="playlist">
                 <!-- Треки будут добавляться сюда -->
             </ul>
@@ -187,6 +187,45 @@
                 </div>
             </div>
         </div>
+
+        <!-- Мини-окно управления плейлистом -->
+        <div id="playlistDetailModal" class="modal hidden">
+            <div class="modal-content playlist-detail">
+                <h3 id="playlistDetailTitle">Управление плейлистом</h3>
+                
+                <!-- Обложка плейлиста -->
+                <div class="playlist-cover-container">
+                    <canvas id="playlistCover" class="playlist-cover" width="200" height="200"></canvas>
+                    <button id="changePlaylistCoverBtn" class="small-btn">📷 Изменить обложку</button>
+                </div>
+                
+                <!-- Название и автор -->
+                <input type="text" id="playlistEditName" placeholder="Название плейлиста">
+                <input type="text" id="playlistEditAuthor" placeholder="Автор">
+                
+                <div class="playlist-actions">
+                    <button id="renamePlaylistBtn" class="action-btn">📝 Переименовать</button>
+                    <button id="deletePlaylistBtn" class="action-btn delete">🗑️ Удалить плейлист</button>
+                </div>
+                
+                <h4>Треки в плейлисте:</h4>
+                <div id="playlistTracks" class="playlist-tracks">
+                    <!-- Треки плейлиста будут здесь -->
+                </div>
+                
+                <h4>Добавить треки из общего списка:</h4>
+                <div id="availableTracks" class="available-tracks">
+                    <!-- Доступные треки -->
+                </div>
+                
+                <div class="modal-buttons">
+                    <button id="closePlaylistDetailBtn">Закрыть</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Скрытый input для загрузки обложки -->
+        <input type="file" id="coverFileInput" accept="image/*" style="display: none;">
 
         <div class="upload-section">
             <h2>📁 Загрузить с компьютера</h2>
