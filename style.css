@@ -527,22 +527,29 @@ h2, h3 {
     width: 40px;
     height: 40px;
     border-radius: 6px;
-    object-fit: cover;
     background: linear-gradient(135deg, #32007d, #000000);
+    flex-shrink: 0;
 }
 
 .track-info {
     flex: 1;
+    min-width: 0;
 }
 
 .track-title {
     font-weight: 600;
     font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .track-artist {
     font-size: 12px;
     color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .track-remove-btn {
@@ -558,6 +565,7 @@ h2, h3 {
     justify-content: center;
     border-radius: 50%;
     transition: all 0.2s;
+    flex-shrink: 0;
 }
 
 .track-remove-btn:hover {
@@ -575,6 +583,7 @@ h2, h3 {
     cursor: pointer;
     font-size: 12px;
     transition: all 0.2s;
+    flex-shrink: 0;
 }
 
 .track-add-btn:hover {
@@ -842,7 +851,7 @@ h2, h3 {
     flex-direction: column;
     gap: 15px;
     margin: 20px 0;
-    max-height: 300px;
+    max-height: 400px;
     overflow-y: auto;
     padding-right: 10px;
 }
@@ -854,7 +863,7 @@ h2, h3 {
 }
 
 .eq-slider label {
-    width: 50px;
+    width: 60px;
     font-size: 12px;
     color: #32007d;
     font-weight: 600;
