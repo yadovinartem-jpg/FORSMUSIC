@@ -16,19 +16,522 @@ body {
     margin: 0 auto;
 }
 
-h1 {
-    font-size: 28px;
+/* Шапка */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 20px;
+}
+
+.header h1 {
+    font-size: 24px;
     color: #32007d;
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.playlists-btn, .upload-btn-header {
+    background: #32007d;
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.playlists-btn:hover, .upload-btn-header:hover {
+    background: #4a1a9e;
+    transform: scale(1.05);
+}
+
+/* Модальное окно загрузки */
+.upload-modal {
+    max-width: 450px;
+}
+
+.file-select-area {
     text-align: center;
-    letter-spacing: 2px;
+    padding: 20px;
+    border: 2px dashed #32007d;
+    border-radius: 12px;
+    margin-bottom: 20px;
 }
 
-.sity {
+.file-select-area input[type="file"] {
+    display: none;
+}
+
+.file-select-label {
+    display: inline-block;
+    background: #32007d;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+.file-select-label:hover {
+    background: #4a1a9e;
+    transform: scale(1.02);
+}
+
+.pending-tracks-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+}
+
+.pending-track-item {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.pending-track-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.pending-track-cover {
+    width: 50px;
+    height: 50px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #32007d, #000000);
+}
+
+.pending-track-info {
+    flex: 1;
+}
+
+.pending-track-title {
+    font-weight: 600;
+    color: white;
+    font-size: 14px;
+}
+
+.pending-track-filename {
+    font-size: 11px;
+    color: #999;
+}
+
+.pending-track-edit {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pending-track-edit input {
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 8px;
+    color: white;
+    font-size: 13px;
+}
+
+.pending-track-edit input:focus {
+    outline: none;
+    border-color: #32007d;
+}
+
+.confirm-upload-btn {
+    width: 100%;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.confirm-upload-btn:disabled {
+    background: #666;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.confirm-upload-btn:hover:not(:disabled) {
+    background: #45a049;
+    transform: scale(1.02);
+}
+
+/* Сетка плейлистов */
+.playlists-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.playlist-square {
+    aspect-ratio: 1/1;
+    background: #2a2a2a;
+    border-radius: 12px;
+    padding: 10px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+}
+
+.playlist-square:hover {
+    transform: translateY(-2px);
+    border-color: #32007d;
+    box-shadow: 0 4px 12px rgba(50, 0, 125, 0.3);
+}
+
+.playlist-square-cover {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #32007d, #000000);
+}
+
+.playlist-square-name {
+    font-size: 12px;
+    color: white;
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.playlist-square-count {
+    font-size: 10px;
+    color: #999;
+    margin-top: 4px;
+}
+
+/* Модальное окно плейлиста */
+.playlist-modal {
+    max-width: 450px;
+}
+
+.playlist-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.playlist-cover-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.playlist-cover-edit {
+    width: 150px;
+    height: 150px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #32007d, #000000);
+    box-shadow: 0 4px 12px rgba(50, 0, 125, 0.3);
+}
+
+.playlist-form input[type="text"] {
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 12px;
+    color: white;
+    font-size: 14px;
+    width: 100%;
+}
+
+.playlist-form input[type="text"]:focus {
+    outline: none;
+    border-color: #32007d;
+}
+
+.playlist-search input {
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 12px;
+    color: white;
+    font-size: 14px;
+    width: 100%;
+}
+
+.available-tracks-list, .playlist-tracks-list {
+    max-height: 200px;
+    overflow-y: auto;
+    background: #111;
+    border-radius: 8px;
+    border: 1px solid #333;
+}
+
+.playlist-track-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid #333;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.playlist-track-item:hover {
+    background: #1a1a1a;
+}
+
+.playlist-track-item .track-mini-cover {
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    margin-right: 10px;
+    background: linear-gradient(135deg, #32007d, #000000);
+}
+
+.playlist-track-item .track-info {
+    flex: 1;
+}
+
+.playlist-track-item .track-title {
+    font-size: 12px;
+    color: white;
+}
+
+.playlist-track-item .track-artist {
+    font-size: 10px;
+    color: #999;
+}
+
+.playlist-track-item .add-to-playlist,
+.playlist-track-item .remove-from-playlist {
+    background: none;
+    border: none;
+    color: #4CAF50;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.playlist-track-item .remove-from-playlist {
+    color: #f44336;
+}
+
+.save-playlist-btn, .delete-playlist-btn {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.save-playlist-btn {
+    background: #32007d;
+    color: white;
+    flex: 1;
+}
+
+.delete-playlist-btn {
+    background: #f44336;
+    color: white;
+}
+
+.save-playlist-btn:hover, .delete-playlist-btn:hover {
+    transform: scale(1.02);
+    opacity: 0.9;
+}
+
+/* Меню троеточия */
+.track-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(5px);
+}
+
+.track-menu.hidden {
+    display: none;
+}
+
+.track-menu-content {
+    background: #000000;
+    border: 1px solid #32007d;
+    border-radius: 12px;
+    padding: 20px;
+    width: 90%;
+    max-width: 350px;
+}
+
+.track-menu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #333;
+}
+
+.track-menu-header span {
+    color: white;
+    font-weight: 600;
+}
+
+.track-menu-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.playlist-menu-item {
+    padding: 12px;
+    border-bottom: 1px solid #333;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.2s;
+}
+
+.playlist-menu-item:hover {
+    background: #1a1a1a;
+}
+
+.playlist-menu-item .playlist-mini-cover {
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #32007d, #000000);
+}
+
+.playlist-menu-item .playlist-menu-info {
+    flex: 1;
+}
+
+.playlist-menu-item .playlist-menu-name {
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.playlist-menu-item .playlist-menu-check {
+    color: #4CAF50;
+    font-size: 18px;
+}
+
+/* Треклист */
+.tracklist {
+    background: var(--tg-theme-secondary-bg-color, #fff);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(50, 0, 125, 0.2);
+}
+
+.tracklist h2 {
+    color: #32007d;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.tracklist-ul {
+    list-style: none;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.tracklist-item {
+    padding: 12px;
+    border-bottom: 1px solid var(--tg-theme-hint-color, #eee);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.3s;
+}
+
+.tracklist-item:hover {
+    background: var(--tg-theme-bg-color, #f0f0f0);
+}
+
+.tracklist-item.active {
+    background: #32007d;
+    color: white;
+    border-radius: 8px;
+}
+
+.tracklist-item .track-mini-cover {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #32007d, #000000);
+    flex-shrink: 0;
+}
+
+.tracklist-item .track-info {
+    flex: 1;
+}
+
+.tracklist-item .track-title {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.tracklist-item .track-artist {
+    font-size: 11px;
+    color: #666;
+}
+
+.tracklist-item.active .track-artist {
+    color: rgba(255,255,255,0.8);
+}
+
+.tracklist-item .track-menu-btn {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #999;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.tracklist-item .track-menu-btn:hover {
+    background: rgba(0,0,0,0.1);
     color: #32007d;
 }
 
-/* Стили для обложки */
+.tracklist-item.active .track-menu-btn {
+    color: white;
+}
+
+.tracklist-item.active .track-menu-btn:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+/* Остальные стили (без изменений из предыдущей версии) */
 .album-art-container {
     position: relative;
     width: 100%;
@@ -168,7 +671,6 @@ h1 {
     margin-bottom: 15px;
 }
 
-/* Стили для регулятора громкости */
 .volume-control {
     display: flex;
     align-items: center;
@@ -220,123 +722,18 @@ h1 {
     font-weight: 600;
 }
 
-/* Навигация по библиотеке */
-.library-nav {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-    background: var(--tg-theme-secondary-bg-color, #fff);
-    padding: 10px;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(50, 0, 125, 0.2);
-}
-
-.library-btn {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    border-radius: 8px;
-    background: transparent;
-    color: #32007d;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.library-btn.active {
-    background: #32007d;
-    color: white;
-}
-
-.playlist, .upload-section, .equalizer-section,
-.playlists-section, .favorites-section {
-    background: var(--tg-theme-secondary-bg-color, #fff);
-    padding: 20px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(50, 0, 125, 0.2);
-}
-
 .hidden {
-    display: none;
+    display: none !important;
 }
 
-h2, h3 {
-    margin-bottom: 15px;
-    font-size: 18px;
-    color: #32007d;
-}
-
-/* Стили для плейлистов */
-.create-playlist-btn {
-    width: 100%;
-    padding: 12px;
-    background: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    cursor: pointer;
-    margin-bottom: 15px;
-    transition: all 0.3s;
-}
-
-.create-playlist-btn:hover {
-    opacity: 0.9;
-    transform: scale(1.02);
-}
-
-.playlists-container {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.playlist-item {
-    background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
-    padding: 15px;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.3s;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border: 2px solid transparent;
-}
-
-.playlist-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(50, 0, 125, 0.2);
-    border-color: #32007d;
-}
-
-.playlist-item h4 {
-    color: #32007d;
-    margin-bottom: 5px;
-    font-size: 16px;
-}
-
-.playlist-item p {
-    font-size: 12px;
-    color: #666;
-}
-
-.playlist-stats {
-    background: #32007d;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 16px;
-    font-size: 12px;
-}
-
-/* Модальное окно */
+/* Стили для модальных окон */
 .modal {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.7);
+    background: rgba(0,0,0,0.8);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -360,53 +757,6 @@ h2, h3 {
     border: 1px solid #32007d;
 }
 
-.modal-content input {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 10px;
-    border: 2px solid #32007d;
-    border-radius: 8px;
-    font-size: 16px;
-    background: #222;
-    color: white;
-}
-
-.modal-content input::placeholder {
-    color: #999;
-}
-
-.modal-buttons {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
-}
-
-.modal-buttons button {
-    flex: 1;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-#savePlaylistBtn {
-    background: #32007d;
-    color: white;
-}
-
-#cancelPlaylistBtn, #closePlaylistDetailBtn {
-    background: #f44336;
-    color: white;
-}
-
-.modal-buttons button:hover {
-    opacity: 0.9;
-    transform: scale(1.02);
-}
-
-/* Стили для заголовка модального окна */
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -442,270 +792,9 @@ h2, h3 {
     transform: scale(1.1);
 }
 
-/* Стили для детального просмотра плейлиста */
-.playlist-detail {
-    max-width: 500px;
-}
-
-.playlist-cover-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.playlist-cover {
-    width: 200px;
-    height: 200px;
-    border-radius: 12px;
-    margin-bottom: 10px;
-    background: linear-gradient(135deg, #32007d, #000000);
-    box-shadow: 0 4px 12px rgba(50, 0, 125, 0.5);
-}
-
-.small-btn {
-    background: #4a1a9e;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.small-btn:hover {
-    background: #32007d;
-    transform: scale(1.05);
-}
-
-.playlist-tracks, .available-tracks {
-    max-height: 250px;
-    overflow-y: auto;
-    border: 1px solid #333;
-    border-radius: 8px;
-    margin-bottom: 15px;
-    background: #111;
-}
-
-/* Стили для треков с мини-обложкой */
-.track-item {
-    padding: 8px;
-    border-bottom: 1px solid #333;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    transition: background 0.2s;
-    background: #000000;
-}
-
-.track-item:hover {
-    background: #1a1a1a;
-}
-
-.track-mini-cover {
-    width: 40px;
-    height: 40px;
-    border-radius: 6px;
-    background: linear-gradient(135deg, #32007d, #000000);
-    flex-shrink: 0;
-}
-
-.track-info {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-}
-
-.track-title {
-    font-weight: 600;
-    font-size: 14px;
-    color: #ffffff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 2px;
-}
-
-.track-artist {
-    font-size: 11px;
-    color: #b0b0b0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.track-remove-btn {
-    background: none;
-    border: none;
-    color: #ffffff;
-    font-size: 18px;
-    cursor: pointer;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: all 0.2s;
-    flex-shrink: 0;
-}
-
-.track-remove-btn:hover {
-    background: #ffebee;
-    color: #f44336;
-    transform: scale(1.1);
-}
-
-.track-add-btn {
-    background: #4CAF50;
-    color: white;
-    border: none;
-    padding: 5px 12px;
-    border-radius: 16px;
-    cursor: pointer;
-    font-size: 12px;
-    transition: all 0.2s;
-    flex-shrink: 0;
-}
-
-.track-add-btn:hover {
-    background: #45a049;
-    transform: scale(1.05);
-}
-
-#playlistEditName, #playlistEditAuthor {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 10px;
-    border: 2px solid #32007d;
-    border-radius: 8px;
-    font-size: 14px;
-    transition: all 0.3s;
-    background: #222;
-    color: white;
-}
-
-#playlistEditName:focus, #playlistEditAuthor:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(50, 0, 125, 0.5);
-}
-
-.clear-btn {
-    background: #f44336;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 20px;
-    cursor: pointer;
-    margin-bottom: 15px;
-    font-size: 14px;
-    width: 100%;
-    transition: all 0.3s;
-}
-
-.clear-btn:hover {
-    opacity: 0.9;
-    transform: scale(1.02);
-}
-
-#playlist, .favorites-list {
-    list-style: none;
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-#playlist li, .favorites-list li {
-    padding: 12px;
-    border-bottom: 1px solid var(--tg-theme-hint-color, #eee);
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: background 0.3s;
-}
-
-#playlist li:hover, .favorites-list li:hover {
-    background: var(--tg-theme-bg-color, #f0f0f0);
-}
-
-#playlist li.active {
-    background: #32007d;
-    color: white;
-    border-radius: 8px;
-}
-
-.track-info {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-}
-
-.track-title {
-    font-weight: 600;
-}
-
-.track-artist {
-    font-size: 12px;
-    color: var(--tg-theme-hint-color, #999);
-}
-
-#playlist li.active .track-artist {
-    color: rgba(255,255,255,0.8);
-}
-
-.like-icon {
-    font-size: 20px;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.like-icon:hover {
-    transform: scale(1.2);
-}
-
-.like-icon.active {
-    color: #ff4444;
-}
-
-.upload-area input[type="file"] {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 10px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background: var(--tg-theme-bg-color, #fff);
-    color: var(--tg-theme-text-color, #222);
-}
-
-.upload-btn {
-    background: #32007d;
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 8px;
-    font-size: 16px;
-    cursor: pointer;
-    width: 100%;
-    transition: all 0.3s;
-}
-
-.upload-btn:hover {
-    opacity: 0.9;
-    transform: scale(1.02);
-}
-
-.upload-area {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
 .hint {
     font-size: 12px;
-    color: var(--tg-theme-hint-color, #999);
+    color: #999;
     margin-top: 8px;
     text-align: center;
 }
@@ -746,7 +835,6 @@ h2, h3 {
     display: none;
 }
 
-/* Управление Q-фактором */
 .eq-q-control {
     background: #f0f0f0;
     padding: 15px;
