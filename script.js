@@ -657,7 +657,7 @@ let eqSettings = {
     16000: 0
 };
 
-let currentQ = 1.0;
+let currentQ = 2.5;
 
 function initEQ() {
     if (isEQInitialized) return;
