@@ -75,8 +75,6 @@ const playlistCover = document.getElementById('playlistCover');
 const playlistCoverCtx = playlistCover.getContext('2d');
 const playlistEditName = document.getElementById('playlistEditName');
 const playlistEditAuthor = document.getElementById('playlistEditAuthor');
-const renamePlaylistBtn = document.getElementById('renamePlaylistBtn');
-const deletePlaylistBtn = document.getElementById('deletePlaylistBtn');
 const changePlaylistCoverBtn = document.getElementById('changePlaylistCoverBtn');
 const playlistTracks = document.getElementById('playlistTracks');
 const availableTracks = document.getElementById('availableTracks');
@@ -186,7 +184,7 @@ function drawImageAlbumArt(canvas, img) {
 // Рисуем стандартную обложку при загрузке
 drawGradientAlbumArt(albumArt, 'FOR SITY');
 
-// ========== ФУНКЦИИ ДЛЯ ИЗВЛЕЧЕНИЯ ОБЛОЖКИ ИЗ MP3 ==========
+// ========== ФУНКЦИИ ДЛЯ ИЗВЛЕЧЕНИЯ МЕТАДАННЫХ ИЗ MP3 ==========
 function loadJsMediaTags() {
     return new Promise((resolve, reject) => {
         if (window.jsmediatags) {
@@ -214,27 +212,43 @@ function arrayBufferToBase64(buffer) {
     return window.btoa(binary);
 }
 
-async function extractAlbumArt(file) {
+async function extractMetadata(file) {
     try {
         const jsmediatags = await loadJsMediaTags();
         
         return new Promise((resolve) => {
             jsmediatags.read(file, {
                 onSuccess: (tag) => {
+                    const metadata = {
+                        title: null,
+                        artist: null,
+                        albumArt: null
+                    };
+                    
+                    // Извлекаем название трека
+                    if (tag.tags && tag.tags.title) {
+                        metadata.title = tag.tags.title;
+                    }
+                    
+                    // Извлекаем исполнителя
+                    if (tag.tags && tag.tags.artist) {
+                        metadata.artist = tag.tags.artist;
+                    }
+                    
+                    // Извлекаем обложку
                     if (tag.tags && tag.tags.picture) {
                         const picture = tag.tags.picture;
                         const base64String = arrayBufferToBase64(picture.data);
-                        const imageUrl = `data:${picture.format};base64,${base64String}`;
-                        resolve(imageUrl);
-                    } else {
-                        resolve(null);
+                        metadata.albumArt = `data:${picture.format};base64,${base64String}`;
                     }
+                    
+                    resolve(metadata);
                 },
-                onError: () => resolve(null)
+                onError: () => resolve({ title: null, artist: null, albumArt: null })
             });
         });
     } catch (error) {
-        return null;
+        return { title: null, artist: null, albumArt: null };
     }
 }
 
@@ -384,6 +398,27 @@ function openPlaylistDetail(playlistId) {
     
     playlistDetailModal.classList.remove('hidden');
 }
+
+// Функции для мгновенного обновления
+window.updatePlaylistName = function(newName) {
+    const playlist = playlists.find(p => p.id === currentPlaylistId);
+    if (playlist && newName.trim()) {
+        playlist.name = newName.trim();
+        playlistDetailTitle.textContent = playlist.name;
+        localStorage.setItem('playlists', JSON.stringify(playlists));
+        updatePlaylistsContainer();
+        drawGradientAlbumArt(playlistCover, playlist.name);
+    }
+};
+
+window.updatePlaylistAuthor = function(newAuthor) {
+    const playlist = playlists.find(p => p.id === currentPlaylistId);
+    if (playlist && newAuthor.trim()) {
+        playlist.author = newAuthor.trim();
+        localStorage.setItem('playlists', JSON.stringify(playlists));
+        updatePlaylistsContainer();
+    }
+};
 
 function updatePlaylistTracks() {
     const playlist = playlists.find(p => p.id === currentPlaylistId);
@@ -535,33 +570,6 @@ window.removeTrackFromPlaylist = function(playlistId, trackIndex) {
         showNotification('Трек удален из плейлиста');
     }
 };
-
-renamePlaylistBtn.addEventListener('click', () => {
-    const playlist = playlists.find(p => p.id === currentPlaylistId);
-    if (playlist) {
-        const newName = playlistEditName.value.trim();
-        const newAuthor = playlistEditAuthor.value.trim();
-        
-        if (newName) playlist.name = newName;
-        if (newAuthor) playlist.author = newAuthor;
-        
-        localStorage.setItem('playlists', JSON.stringify(playlists));
-        playlistDetailTitle.textContent = playlist.name;
-        updatePlaylistsContainer();
-        drawGradientAlbumArt(playlistCover, playlist.name);
-        showNotification('Плейлист обновлен');
-    }
-});
-
-deletePlaylistBtn.addEventListener('click', () => {
-    if (confirm('Удалить плейлист?')) {
-        playlists = playlists.filter(p => p.id !== currentPlaylistId);
-        localStorage.setItem('playlists', JSON.stringify(playlists));
-        playlistDetailModal.classList.add('hidden');
-        updatePlaylistsContainer();
-        showNotification('Плейлист удален');
-    }
-});
 
 changePlaylistCoverBtn.addEventListener('click', () => {
     coverFileInput.click();
@@ -1053,13 +1061,13 @@ if (uploadBtn) {
             const fileName = file.name.replace('.mp3', '').replace('.MP3', '');
             
             showNotification('Чтение метаданных...');
-            const albumArtUrl = await extractAlbumArt(file);
+            const metadata = await extractMetadata(file);
             
             tracks.push({
                 url: fileUrl,
-                title: fileName,
-                artist: 'Загружено с ПК',
-                albumArt: albumArtUrl
+                title: metadata.title || fileName,
+                artist: metadata.artist || 'Неизвестный исполнитель',
+                albumArt: metadata.albumArt
             });
             
             updatePlaylist();
