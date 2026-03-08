@@ -35,7 +35,7 @@ body {
     gap: 10px;
 }
 
-.playlists-btn, .upload-btn-header {
+.upload-btn-header {
     background: #32007d;
     color: white;
     border: none;
@@ -50,7 +50,7 @@ body {
     transition: all 0.3s;
 }
 
-.playlists-btn:hover, .upload-btn-header:hover {
+.upload-btn-header:hover {
     background: #4a1a9e;
     transform: scale(1.05);
 }
@@ -114,6 +114,7 @@ body {
     height: 50px;
     border-radius: 6px;
     background: linear-gradient(135deg, #32007d, #000000);
+    flex-shrink: 0;
 }
 
 .pending-track-info {
@@ -302,6 +303,7 @@ body {
     border-radius: 4px;
     margin-right: 10px;
     background: linear-gradient(135deg, #32007d, #000000);
+    flex-shrink: 0;
 }
 
 .playlist-track-item .track-info {
@@ -423,6 +425,7 @@ body {
     height: 30px;
     border-radius: 4px;
     background: linear-gradient(135deg, #32007d, #000000);
+    flex-shrink: 0;
 }
 
 .playlist-menu-item .playlist-menu-info {
@@ -531,7 +534,7 @@ body {
     background: rgba(255,255,255,0.2);
 }
 
-/* Остальные стили (без изменений из предыдущей версии) */
+/* Остальные стили */
 .album-art-container {
     position: relative;
     width: 100%;
