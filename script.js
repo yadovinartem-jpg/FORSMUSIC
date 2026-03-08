@@ -116,78 +116,23 @@ function updateVolumeIcon(volume) {
 }
 
 // ========== ФУНКЦИИ ДЛЯ ИЗВЛЕЧЕНИЯ ОБЛОЖКИ ИЗ MP3 ==========
-function extractAlbumArt(file) {
-    return new Promise((resolve) => {
-        // Создаем ссылку на файл
-        const url = URL.createObjectURL(file);
-        
-        // Создаем аудио элемент для чтения метаданных
-        const tempAudio = new Audio();
-        tempAudio.src = url;
-        
-        // Пытаемся получить обложку через API
-        if ('metadata' in tempAudio) {
-            tempAudio.addEventListener('loadedmetadata', () => {
-                // Проверяем, есть ли обложка
-                const video = document.createElement('video');
-                video.src = url;
-                video.addEventListener('loadeddata', () => {
-                    if (video.videoWidth > 0) {
-                        // Если есть видео (обложка), создаем canvas для извлечения
-                        const canvas = document.createElement('canvas');
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        const imageUrl = canvas.toDataURL('image/jpeg');
-                        URL.revokeObjectURL(url);
-                        resolve(imageUrl);
-                    } else {
-                        URL.revokeObjectURL(url);
-                        resolve(null);
-                    }
-                });
-                
-                video.addEventListener('error', () => {
-                    URL.revokeObjectURL(url);
-                    resolve(null);
-                });
-            });
-            
-            tempAudio.addEventListener('error', () => {
-                URL.revokeObjectURL(url);
-                resolve(null);
-            });
-        } else {
-            // Если API не поддерживается, пробуем через jsmediatags
-            if (window.jsmediatags) {
-                jsmediatags.read(file, {
-                    onSuccess: (tag) => {
-                        if (tag.tags.picture) {
-                            const picture = tag.tags.picture;
-                            const base64String = arrayBufferToBase64(picture.data);
-                            const imageUrl = `data:${picture.format};base64,${base64String}`;
-                            URL.revokeObjectURL(url);
-                            resolve(imageUrl);
-                        } else {
-                            URL.revokeObjectURL(url);
-                            resolve(null);
-                        }
-                    },
-                    onError: () => {
-                        URL.revokeObjectURL(url);
-                        resolve(null);
-                    }
-                });
-            } else {
-                URL.revokeObjectURL(url);
-                resolve(null);
-            }
+// Подключаем библиотеку для чтения метаданных MP3
+function loadJsMediaTags() {
+    return new Promise((resolve, reject) => {
+        if (window.jsmediatags) {
+            resolve(window.jsmediatags);
+            return;
         }
+        
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js';
+        script.onload = () => resolve(window.jsmediatags);
+        script.onerror = reject;
+        document.head.appendChild(script);
     });
 }
 
-// Вспомогательная функция для конвертации ArrayBuffer в Base64
+// Конвертация ArrayBuffer в Base64
 function arrayBufferToBase64(buffer) {
     let binary = '';
     const bytes = new Uint8Array(buffer);
@@ -197,13 +142,49 @@ function arrayBufferToBase64(buffer) {
     return window.btoa(binary);
 }
 
+// Извлечение обложки из файла
+async function extractAlbumArt(file) {
+    try {
+        // Загружаем библиотеку если ещё не загружена
+        const jsmediatags = await loadJsMediaTags();
+        
+        return new Promise((resolve) => {
+            jsmediatags.read(file, {
+                onSuccess: (tag) => {
+                    console.log('Метаданные MP3:', tag);
+                    
+                    // Проверяем наличие обложки
+                    if (tag.tags && tag.tags.picture) {
+                        const picture = tag.tags.picture;
+                        const base64String = arrayBufferToBase64(picture.data);
+                        const imageUrl = `data:${picture.format};base64,${base64String}`;
+                        console.log('✅ Обложка найдена');
+                        resolve(imageUrl);
+                    } else {
+                        console.log('❌ Обложка не найдена в метаданных');
+                        resolve(null);
+                    }
+                },
+                onError: (error) => {
+                    console.error('Ошибка чтения метаданных:', error);
+                    resolve(null);
+                }
+            });
+        });
+    } catch (error) {
+        console.error('Ошибка загрузки библиотеки:', error);
+        return null;
+    }
+}
+
 // Обновление обложки
 function updateAlbumArt(track) {
     if (track && track.albumArt) {
         albumArt.src = track.albumArt;
     } else {
-        // Если нет обложки, показываем заглушку
-        albumArt.src = 'https://via.placeholder.com/300x300/32007d/ffffff?text=FOR+SITY';
+        // Если нет обложки, показываем заглушку с градиентом
+        albumArt.src = 'https://via.placeholder.com/300x300/32007d/ffffff?text=' + 
+                      encodeURIComponent(track ? track.title : 'FOR+SITY');
     }
     
     if (track) {
@@ -780,6 +761,7 @@ if (uploadBtn) {
             const fileName = file.name.replace('.mp3', '').replace('.MP3', '');
             
             // Пытаемся извлечь обложку
+            tg.showAlert('Чтение метаданных...');
             const albumArtUrl = await extractAlbumArt(file);
             
             tracks.push({
