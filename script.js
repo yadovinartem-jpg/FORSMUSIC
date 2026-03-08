@@ -7,7 +7,6 @@ console.log('Telegram WebApp version:', tg.version);
 
 // Универсальная функция показа уведомлений
 function showNotification(message) {
-    // Пробуем разные методы в зависимости от версии
     if (typeof tg.showAlert === 'function') {
         tg.showAlert(message);
     } else if (typeof tg.showPopup === 'function') {
@@ -17,7 +16,6 @@ function showNotification(message) {
             buttons: [{ type: 'ok' }]
         });
     } else {
-        // Если ничего не работает, используем alert
         alert(message);
     }
 }
@@ -32,7 +30,7 @@ const playlist = document.getElementById('playlist');
 const clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
 const likeBtn = document.getElementById('likeBtn');
 
-// Элементы обложки - заменили img на canvas для рисования
+// Элементы обложки
 const albumArt = document.getElementById('albumArt');
 const ctx = albumArt.getContext('2d');
 const currentTrackTitle = document.getElementById('currentTrackTitle');
@@ -50,6 +48,7 @@ const shuffleBtn = document.getElementById('shuffleBtn');
 // Элементы загрузки
 const fileInput = document.getElementById('fileInput');
 const uploadBtn = document.getElementById('uploadBtn');
+const coverFileInput = document.getElementById('coverFileInput');
 
 // Элементы навигации по библиотеке
 const showPlaylistsBtn = document.getElementById('showPlaylistsBtn');
@@ -68,6 +67,20 @@ const savePlaylistBtn = document.getElementById('savePlaylistBtn');
 const cancelPlaylistBtn = document.getElementById('cancelPlaylistBtn');
 const playlistsContainer = document.getElementById('playlistsContainer');
 const favoritesList = document.getElementById('favoritesList');
+
+// Элементы для детального просмотра плейлиста
+const playlistDetailModal = document.getElementById('playlistDetailModal');
+const playlistDetailTitle = document.getElementById('playlistDetailTitle');
+const playlistCover = document.getElementById('playlistCover');
+const playlistCoverCtx = playlistCover.getContext('2d');
+const playlistEditName = document.getElementById('playlistEditName');
+const playlistEditAuthor = document.getElementById('playlistEditAuthor');
+const renamePlaylistBtn = document.getElementById('renamePlaylistBtn');
+const deletePlaylistBtn = document.getElementById('deletePlaylistBtn');
+const changePlaylistCoverBtn = document.getElementById('changePlaylistCoverBtn');
+const playlistTracks = document.getElementById('playlistTracks');
+const availableTracks = document.getElementById('availableTracks');
+const closePlaylistDetailBtn = document.getElementById('closePlaylistDetailBtn');
 
 // Элементы эквалайзера
 const qSlider = document.getElementById('qSlider');
@@ -92,6 +105,9 @@ let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
 // Плейлисты
 let playlists = JSON.parse(localStorage.getItem('playlists')) || [];
 
+// Текущий открытый плейлист
+let currentPlaylistId = null;
+
 // Режимы повтора: 0 - нет повтора, 1 - повтор всего плейлиста, 2 - повтор одного трека
 let repeatMode = 0;
 let shuffleMode = false;
@@ -106,7 +122,7 @@ updatePlaylistsContainer();
 // ========== ГРОМКОСТЬ ==========
 function initVolume() {
     const savedVolume = localStorage.getItem('volume');
-    let startVolume = 60;
+    let startVolume = 60; // Установлено 60%
     
     if (savedVolume !== null) {
         startVolume = parseInt(savedVolume);
@@ -137,40 +153,41 @@ function updateVolumeIcon(volume) {
 }
 
 // ========== ФУНКЦИИ ДЛЯ РИСОВАНИЯ ОБЛОЖКИ ==========
-function drawGradientAlbumArt(text = 'FOR SITY') {
-    // Рисуем градиентный фон
-    const gradient = ctx.createLinearGradient(0, 0, 300, 300);
+function drawGradientAlbumArt(canvas, text = 'FOR SITY') {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
     gradient.addColorStop(0, '#32007d');
     gradient.addColorStop(1, '#000000');
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 300, 300);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Рисуем текст
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 24px Arial';
+    ctx.font = `bold ${canvas.width/12}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     
-    // Разбиваем длинный текст на несколько строк
     const words = text.split(' ');
     if (words.length > 2) {
-        ctx.fillText(words.slice(0, 2).join(' '), 150, 120);
-        ctx.fillText(words.slice(2).join(' '), 150, 180);
+        ctx.fillText(words.slice(0, 2).join(' '), canvas.width/2, canvas.height/2 - 20);
+        ctx.fillText(words.slice(2).join(' '), canvas.width/2, canvas.height/2 + 20);
     } else {
-        ctx.fillText(text, 150, 150);
+        ctx.fillText(text, canvas.width/2, canvas.height/2);
     }
 }
 
 // Рисование обложки из изображения
-function drawImageAlbumArt(img) {
-    ctx.drawImage(img, 0, 0, 300, 300);
+function drawImageAlbumArt(canvas, img) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 }
 
 // Рисуем стандартную обложку при загрузке
-drawGradientAlbumArt('FOR SITY');
+drawGradientAlbumArt(albumArt, 'FOR SITY');
 
 // ========== ФУНКЦИИ ДЛЯ ИЗВЛЕЧЕНИЯ ОБЛОЖКИ ИЗ MP3 ==========
-// Подключаем библиотеку для чтения метаданных MP3
 function loadJsMediaTags() {
     return new Promise((resolve, reject) => {
         if (window.jsmediatags) {
@@ -189,7 +206,6 @@ function loadJsMediaTags() {
     });
 }
 
-// Конвертация ArrayBuffer в Base64
 function arrayBufferToBase64(buffer) {
     let binary = '';
     const bytes = new Uint8Array(buffer);
@@ -199,57 +215,38 @@ function arrayBufferToBase64(buffer) {
     return window.btoa(binary);
 }
 
-// Извлечение обложки из файла
 async function extractAlbumArt(file) {
     try {
-        // Загружаем библиотеку если ещё не загружена
         const jsmediatags = await loadJsMediaTags();
         
         return new Promise((resolve) => {
             jsmediatags.read(file, {
                 onSuccess: (tag) => {
-                    console.log('Метаданные MP3:', tag);
-                    
-                    // Проверяем наличие обложки
                     if (tag.tags && tag.tags.picture) {
                         const picture = tag.tags.picture;
                         const base64String = arrayBufferToBase64(picture.data);
                         const imageUrl = `data:${picture.format};base64,${base64String}`;
-                        console.log('✅ Обложка найдена');
                         resolve(imageUrl);
                     } else {
-                        console.log('❌ Обложка не найдена в метаданных');
                         resolve(null);
                     }
                 },
-                onError: (error) => {
-                    console.error('Ошибка чтения метаданных:', error);
-                    resolve(null);
-                }
+                onError: () => resolve(null)
             });
         });
     } catch (error) {
-        console.error('Ошибка загрузки библиотеки:', error);
         return null;
     }
 }
 
-// Обновление обложки (теперь используем canvas)
 function updateAlbumArt(track) {
     if (track && track.albumArt) {
-        // Если есть обложка, загружаем её
         const img = new Image();
-        img.onload = () => {
-            drawImageAlbumArt(img);
-        };
-        img.onerror = () => {
-            // Если обложка не загрузилась, рисуем градиент
-            drawGradientAlbumArt(track.title || 'FOR SITY');
-        };
+        img.onload = () => drawImageAlbumArt(albumArt, img);
+        img.onerror = () => drawGradientAlbumArt(albumArt, track.title || 'FOR SITY');
         img.src = track.albumArt;
     } else {
-        // Если нет обложки, рисуем градиент с названием
-        drawGradientAlbumArt(track ? track.title : 'FOR SITY');
+        drawGradientAlbumArt(albumArt, track ? track.title : 'FOR SITY');
     }
     
     if (track) {
@@ -312,7 +309,6 @@ function updateFavoritesList() {
         `;
         li.addEventListener('click', (e) => {
             if (!e.target.classList.contains('like-icon')) {
-                // Ищем трек в основном списке
                 const trackIndex = tracks.findIndex(t => 
                     t.artist === track.artist && t.title === track.title
                 );
@@ -325,7 +321,6 @@ function updateFavoritesList() {
     });
 }
 
-// Глобальная функция для удаления из избранного
 window.removeFromFavorites = function(trackId) {
     favorites = favorites.filter(f => f.id !== trackId);
     localStorage.setItem('favorites', JSON.stringify(favorites));
@@ -340,6 +335,7 @@ function createPlaylist(name, author) {
         name: name,
         author: author,
         tracks: [],
+        cover: null,
         createdAt: new Date().toISOString()
     };
     
@@ -357,21 +353,166 @@ function updatePlaylistsContainer() {
         const div = document.createElement('div');
         div.className = 'playlist-item';
         div.innerHTML = `
-            <h4>${playlist.name}</h4>
-            <p>Создал: ${playlist.author}</p>
-            <p>Треков: ${playlist.tracks.length}</p>
+            <div>
+                <h4>${playlist.name}</h4>
+                <p>Создал: ${playlist.author} • Треков: ${playlist.tracks.length}</p>
+            </div>
+            <span class="playlist-stats">📋</span>
         `;
-        div.addEventListener('click', () => openPlaylist(playlist.id));
+        div.addEventListener('click', () => openPlaylistDetail(playlist.id));
         playlistsContainer.appendChild(div);
     });
 }
 
-function openPlaylist(playlistId) {
+function openPlaylistDetail(playlistId) {
     const playlist = playlists.find(p => p.id === playlistId);
-    if (playlist) {
-        showNotification(`Плейлист "${playlist.name}" (в разработке)`);
+    if (!playlist) return;
+    
+    currentPlaylistId = playlistId;
+    playlistDetailTitle.textContent = playlist.name;
+    playlistEditName.value = playlist.name;
+    playlistEditAuthor.value = playlist.author;
+    
+    // Рисуем обложку плейлиста
+    if (playlist.cover) {
+        const img = new Image();
+        img.onload = () => drawImageAlbumArt(playlistCover, img);
+        img.src = playlist.cover;
+    } else {
+        drawGradientAlbumArt(playlistCover, playlist.name);
     }
+    
+    // Отображаем треки в плейлисте
+    updatePlaylistTracks();
+    
+    playlistDetailModal.classList.remove('hidden');
 }
+
+function updatePlaylistTracks() {
+    const playlist = playlists.find(p => p.id === currentPlaylistId);
+    if (!playlist) return;
+    
+    // Отображаем треки в плейлисте
+    playlistTracks.innerHTML = '';
+    playlist.tracks.forEach((track, index) => {
+        const trackDiv = document.createElement('div');
+        trackDiv.className = 'track-item';
+        trackDiv.innerHTML = `
+            <div class="track-info">
+                <span class="track-title">${track.title}</span>
+                <span class="track-artist">${track.artist}</span>
+            </div>
+            <button class="remove-btn" onclick="removeTrackFromPlaylist('${playlist.id}', ${index})">Удалить</button>
+        `;
+        trackDiv.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('remove-btn')) {
+                const trackIndex = tracks.findIndex(t => t.url === track.url);
+                if (trackIndex !== -1) {
+                    playTrack(trackIndex);
+                    playlistDetailModal.classList.add('hidden');
+                }
+            }
+        });
+        playlistTracks.appendChild(trackDiv);
+    });
+    
+    // Отображаем доступные треки
+    availableTracks.innerHTML = '';
+    tracks.forEach((track, index) => {
+        const isInPlaylist = playlist.tracks.some(t => t.url === track.url);
+        if (!isInPlaylist) {
+            const trackDiv = document.createElement('div');
+            trackDiv.className = 'track-item';
+            trackDiv.innerHTML = `
+                <div class="track-info">
+                    <span class="track-title">${track.title}</span>
+                    <span class="track-artist">${track.artist}</span>
+                </div>
+                <button class="add-btn" onclick="addTrackToPlaylist('${playlist.id}', ${index})">Добавить</button>
+            `;
+            availableTracks.appendChild(trackDiv);
+        }
+    });
+}
+
+window.addTrackToPlaylist = function(playlistId, trackIndex) {
+    const playlist = playlists.find(p => p.id === playlistId);
+    const track = tracks[trackIndex];
+    
+    if (playlist && track) {
+        playlist.tracks.push({...track});
+        localStorage.setItem('playlists', JSON.stringify(playlists));
+        updatePlaylistTracks();
+        updatePlaylistsContainer();
+        showNotification('Трек добавлен в плейлист');
+    }
+};
+
+window.removeTrackFromPlaylist = function(playlistId, trackIndex) {
+    const playlist = playlists.find(p => p.id === playlistId);
+    
+    if (playlist) {
+        playlist.tracks.splice(trackIndex, 1);
+        localStorage.setItem('playlists', JSON.stringify(playlists));
+        updatePlaylistTracks();
+        updatePlaylistsContainer();
+        showNotification('Трек удален из плейлиста');
+    }
+};
+
+// Переименование плейлиста
+renamePlaylistBtn.addEventListener('click', () => {
+    const playlist = playlists.find(p => p.id === currentPlaylistId);
+    if (playlist) {
+        const newName = playlistEditName.value.trim();
+        const newAuthor = playlistEditAuthor.value.trim();
+        
+        if (newName) playlist.name = newName;
+        if (newAuthor) playlist.author = newAuthor;
+        
+        localStorage.setItem('playlists', JSON.stringify(playlists));
+        playlistDetailTitle.textContent = playlist.name;
+        updatePlaylistsContainer();
+        drawGradientAlbumArt(playlistCover, playlist.name);
+        showNotification('Плейлист обновлен');
+    }
+});
+
+// Удаление плейлиста
+deletePlaylistBtn.addEventListener('click', () => {
+    if (confirm('Удалить плейлист?')) {
+        playlists = playlists.filter(p => p.id !== currentPlaylistId);
+        localStorage.setItem('playlists', JSON.stringify(playlists));
+        playlistDetailModal.classList.add('hidden');
+        updatePlaylistsContainer();
+        showNotification('Плейлист удален');
+    }
+});
+
+// Загрузка обложки для плейлиста
+changePlaylistCoverBtn.addEventListener('click', () => {
+    coverFileInput.click();
+});
+
+coverFileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const playlist = playlists.find(p => p.id === currentPlaylistId);
+        if (playlist) {
+            playlist.cover = event.target.result;
+            localStorage.setItem('playlists', JSON.stringify(playlists));
+            
+            const img = new Image();
+            img.onload = () => drawImageAlbumArt(playlistCover, img);
+            img.src = event.target.result;
+            showNotification('Обложка обновлена');
+        }
+    };
+    reader.readAsDataURL(file);
+});
 
 // ========== НАВИГАЦИЯ ПО БИБЛИОТЕКЕ ==========
 showPlaylistsBtn.addEventListener('click', () => {
@@ -404,7 +545,7 @@ showAllTracksBtn.addEventListener('click', () => {
     favoritesSection.classList.add('hidden');
 });
 
-// ========== МОДАЛЬНОЕ ОКНО ПЛЕЙЛИСТА ==========
+// ========== МОДАЛЬНОЕ ОКНО СОЗДАНИЯ ПЛЕЙЛИСТА ==========
 createPlaylistBtn.addEventListener('click', () => {
     playlistModal.classList.remove('hidden');
 });
@@ -427,6 +568,11 @@ savePlaylistBtn.addEventListener('click', () => {
     } else {
         showNotification('Заполните все поля!');
     }
+});
+
+closePlaylistDetailBtn.addEventListener('click', () => {
+    playlistDetailModal.classList.add('hidden');
+    currentPlaylistId = null;
 });
 
 // ========== ФУНКЦИИ ПЛЕЕРА ==========
@@ -523,7 +669,6 @@ function playTrack(index) {
         }
         
         audio.onerror = function(e) {
-            console.error('Ошибка загрузки аудио:', e);
             showNotification('Не удалось загрузить трек');
             isPlaying = false;
             playPauseBtn.textContent = '▶️';
@@ -543,7 +688,6 @@ function playTrack(index) {
             }
             
         }).catch(error => {
-            console.error('Ошибка воспроизведения:', error);
             showNotification('Не удалось воспроизвести трек');
             isPlaying = false;
             playPauseBtn.textContent = '▶️';
@@ -657,7 +801,7 @@ let eqSettings = {
     16000: 0
 };
 
-let currentQ = 2.5;
+let currentQ = 2.5; // Установлено 2.5
 
 function initEQ() {
     if (isEQInitialized) return;
@@ -827,7 +971,6 @@ if (uploadBtn) {
             const fileUrl = URL.createObjectURL(file);
             const fileName = file.name.replace('.mp3', '').replace('.MP3', '');
             
-            // Пытаемся извлечь обложку
             showNotification('Чтение метаданных...');
             const albumArtUrl = await extractAlbumArt(file);
             
@@ -852,7 +995,6 @@ if (uploadBtn) {
 // ========== ОЧИСТКА ПЛЕЙЛИСТА ==========
 if (clearPlaylistBtn) {
     clearPlaylistBtn.addEventListener('click', () => {
-        // Очищаем все временные URL
         tracks.forEach(track => {
             if (track.url && track.url.startsWith('blob:')) {
                 URL.revokeObjectURL(track.url);
@@ -866,7 +1008,7 @@ if (clearPlaylistBtn) {
         audio.src = '';
         playPauseBtn.textContent = '▶️';
         updatePlaylist();
-        drawGradientAlbumArt('FOR SITY');
+        drawGradientAlbumArt(albumArt, 'FOR SITY');
         currentTrackTitle.textContent = 'Нет трека';
         currentTrackArtist.textContent = '';
         showNotification('Плейлист очищен');
@@ -939,7 +1081,7 @@ audio.addEventListener('ended', () => {
         if (progressBar) progressBar.value = 0;
         if (timeDisplay) timeDisplay.textContent = '0:00 / 0:00';
         updatePlaylist();
-        drawGradientAlbumArt('FOR SITY');
+        drawGradientAlbumArt(albumArt, 'FOR SITY');
         currentTrackTitle.textContent = 'Нет трека';
         currentTrackArtist.textContent = '';
     }
