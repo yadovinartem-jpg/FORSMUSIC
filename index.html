@@ -14,7 +14,7 @@
         
         <!-- Обложка текущего трека -->
         <div class="album-art-container">
-            <img id="albumArt" class="album-art" src="https://via.placeholder.com/300x300/32007d/ffffff?text=FOR+SITY" alt="Album Art">
+            <canvas id="albumArt" class="album-art" width="300" height="300"></canvas>
             <div class="track-info-header">
                 <span id="currentTrackTitle">Нет трека</span>
                 <span id="currentTrackArtist"></span>
@@ -149,7 +149,7 @@
             <button id="showAllTracksBtn" class="library-btn active">🎵 Все треки</button>
         </div>
 
-        <!-- Секция плейлистов (скрыта по умолчанию) -->
+        <!-- Секция плейлистов -->
         <div id="playlistsSection" class="playlists-section hidden">
             <h2>Мои плейлисты</h2>
             <button id="createPlaylistBtn" class="create-playlist-btn">➕ Создать плейлист</button>
@@ -158,7 +158,7 @@
             </div>
         </div>
 
-        <!-- Секция избранного (скрыта по умолчанию) -->
+        <!-- Секция избранного -->
         <div id="favoritesSection" class="favorites-section hidden">
             <h2>Избранное</h2>
             <ul id="favoritesList" class="favorites-list">
@@ -168,8 +168,8 @@
 
         <!-- Основной плейлист (все треки) -->
         <div id="allTracksSection" class="playlist">
-            <h2>Плейлист</h2>
-            <button id="clearPlaylistBtn" class="clear-btn">🗑️ Очистить плейлист</button>
+            <h2>Все треки</h2>
+            <button id="clearPlaylistBtn" class="clear-btn">🗑️ Очистить все</button>
             <ul id="playlist">
                 <!-- Треки будут добавляться сюда -->
             </ul>
@@ -184,6 +184,23 @@
                 <div class="modal-buttons">
                     <button id="savePlaylistBtn">Создать</button>
                     <button id="cancelPlaylistBtn">Отмена</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Мини-окно плейлиста для добавления треков -->
+        <div id="playlistDetailModal" class="modal hidden">
+            <div class="modal-content playlist-detail">
+                <h3 id="playlistDetailTitle">Плейлист</h3>
+                <div id="playlistTracks" class="playlist-tracks">
+                    <!-- Треки плейлиста будут здесь -->
+                </div>
+                <h4>Добавить треки:</h4>
+                <div id="availableTracks" class="available-tracks">
+                    <!-- Доступные треки для добавления -->
+                </div>
+                <div class="modal-buttons">
+                    <button id="closePlaylistDetailBtn">Закрыть</button>
                 </div>
             </div>
         </div>
