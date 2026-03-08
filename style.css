@@ -40,9 +40,9 @@ h1 {
 
 .album-art {
     width: 100%;
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 1/1;
+    object-fit: cover;
     display: block;
-    background: linear-gradient(135deg, #32007d, #000000);
 }
 
 .track-info-header {
@@ -168,6 +168,7 @@ h1 {
     margin-bottom: 15px;
 }
 
+/* Стили для регулятора громкости */
 .volume-control {
     display: flex;
     align-items: center;
@@ -219,6 +220,7 @@ h1 {
     font-weight: 600;
 }
 
+/* Навигация по библиотеке */
 .library-nav {
     display: flex;
     gap: 10px;
@@ -265,6 +267,7 @@ h2, h3 {
     color: #32007d;
 }
 
+/* Стили для плейлистов */
 .create-playlist-btn {
     width: 100%;
     padding: 12px;
@@ -289,9 +292,6 @@ h2, h3 {
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
 
 .playlist-item:hover {
@@ -308,6 +308,7 @@ h2, h3 {
     color: #666;
 }
 
+/* Модальное окно */
 .modal {
     position: fixed;
     top: 0;
@@ -331,8 +332,6 @@ h2, h3 {
     border-radius: 12px;
     width: 90%;
     max-width: 400px;
-    max-height: 80vh;
-    overflow-y: auto;
 }
 
 .modal-content input {
@@ -347,7 +346,6 @@ h2, h3 {
 .modal-buttons {
     display: flex;
     gap: 10px;
-    margin-top: 15px;
 }
 
 .modal-buttons button {
@@ -364,57 +362,9 @@ h2, h3 {
     color: white;
 }
 
-#cancelPlaylistBtn, #closePlaylistDetailBtn {
+#cancelPlaylistBtn {
     background: #f44336;
     color: white;
-}
-
-.playlist-detail h4 {
-    margin: 15px 0 10px;
-    color: #32007d;
-}
-
-.playlist-tracks, .available-tracks {
-    max-height: 200px;
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    margin-bottom: 15px;
-}
-
-.track-item {
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.track-item:hover {
-    background: #f0f0f0;
-}
-
-.track-item .track-info {
-    flex: 1;
-}
-
-.track-item .add-btn {
-    background: #4CAF50;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.track-item .remove-btn {
-    background: #f44336;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
 }
 
 .clear-btn {
@@ -475,7 +425,7 @@ h2, h3 {
 }
 
 #playlist li.active .track-artist {
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255,255,255,0.8);
 }
 
 .like-icon {
@@ -531,6 +481,7 @@ h2, h3 {
     text-align: center;
 }
 
+/* Стили для эквалайзера */
 .equalizer-section {
     background: var(--tg-theme-secondary-bg-color, #fff);
     padding: 20px;
@@ -564,6 +515,7 @@ h2, h3 {
     display: none;
 }
 
+/* Управление Q-фактором */
 .eq-q-control {
     background: #f0f0f0;
     padding: 15px;
