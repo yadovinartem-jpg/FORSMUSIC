@@ -472,33 +472,6 @@ h2, h3 {
     transform: scale(1.05);
 }
 
-.playlist-actions {
-    display: flex;
-    gap: 10px;
-    margin: 15px 0;
-}
-
-.action-btn {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.3s;
-    background: #4a1a9e;
-    color: white;
-}
-
-.action-btn.delete {
-    background: #f44336;
-}
-
-.action-btn:hover {
-    opacity: 0.9;
-    transform: scale(1.02);
-}
-
 .playlist-tracks, .available-tracks {
     max-height: 250px;
     overflow-y: auto;
