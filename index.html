@@ -47,6 +47,101 @@
             </div>
         </div>
 
+        <!-- Эквалайзер -->
+        <div class="equalizer-section">
+            <h2>🎚️ Эквалайзер</h2>
+            <button id="toggleEqBtn" class="toggle-eq-btn">Показать эквалайзер</button>
+            
+            <div id="eqControls" class="eq-controls hidden">
+                <!-- Управление шириной полос (Q-фактор) -->
+                <div class="eq-q-control">
+                    <label>Ширина полос (Q-фактор): <span id="qValue">1.0</span></label>
+                    <input type="range" id="qSlider" min="0.5" max="10" value="1.0" step="0.1">
+                </div>
+                
+                <div class="eq-presets">
+                    <button id="applyMyPresetBtn" class="preset-btn">🎧 Мой пресет</button>
+                    <button id="resetEqBtn" class="reset-btn">Сбросить</button>
+                </div>
+                
+                <div class="eq-sliders">
+                    <!-- 32 Гц -->
+                    <div class="eq-slider">
+                        <label>32 Гц</label>
+                        <input type="range" id="eq32" min="-12" max="12" value="0" step="0.5">
+                        <span id="eq32Val" class="eq-value">0 dB</span>
+                    </div>
+                    
+                    <!-- 64 Гц -->
+                    <div class="eq-slider">
+                        <label>64 Гц</label>
+                        <input type="range" id="eq64" min="-12" max="12" value="0" step="0.5">
+                        <span id="eq64Val" class="eq-value">0 dB</span>
+                    </div>
+                    
+                    <!-- 125 Гц -->
+                    <div class="eq-slider">
+                        <label>125 Гц</label>
+                        <input type="range" id="eq125" min="-12" max="12" value="0" step="0.5">
+                        <span id="eq125Val" class="eq-value">0 dB</span>
+                    </div>
+                    
+                    <!-- 250 Гц -->
+                    <div class="eq-slider">
+                        <label>250 Гц</label>
+                        <input type="range" id="eq250" min="-12" max="12" value="0" step="0.5">
+                        <span id="eq250Val" class="eq-value">0 dB</span>
+                    </div>
+                    
+                    <!-- 500 Гц -->
+                    <div class="eq-slider">
+                        <label>500 Гц</label>
+                        <input type="range" id="eq500" min="-12" max="12" value="0" step="0.5">
+                        <span id="eq500Val" class="eq-value">0 dB</span>
+                    </div>
+                    
+                    <!-- 1 кГц -->
+                    <div class="eq-slider">
+                        <label>1 кГц</label>
+                        <input type="range" id="eq1k" min="-12" max="12" value="0" step="0.5">
+                        <span id="eq1kVal" class="eq-value">0 dB</span>
+                    </div>
+                    
+                    <!-- 2 кГц -->
+                    <div class="eq-slider">
+                        <label>2 кГц</label>
+                        <input type="range" id="eq2k" min="-12" max="12" value="0" step="0.5">
+                        <span id="eq2kVal" class="eq-value">0 dB</span>
+                    </div>
+                    
+                    <!-- 4 кГц -->
+                    <div class="eq-slider">
+                        <label>4 кГц</label>
+                        <input type="range" id="eq4k" min="-12" max="12" value="0" step="0.5">
+                        <span id="eq4kVal" class="eq-value">0 dB</span>
+                    </div>
+                    
+                    <!-- 8 кГц -->
+                    <div class="eq-slider">
+                        <label>8 кГц</label>
+                        <input type="range" id="eq8k" min="-12" max="12" value="0" step="0.5">
+                        <span id="eq8kVal" class="eq-value">0 dB</span>
+                    </div>
+                    
+                    <!-- 16 кГц -->
+                    <div class="eq-slider">
+                        <label>16 кГц</label>
+                        <input type="range" id="eq16k" min="-12" max="12" value="0" step="0.5">
+                        <span id="eq16kVal" class="eq-value">0 dB</span>
+                    </div>
+                </div>
+                
+                <div class="eq-control-buttons">
+                    <button id="saveEqBtn">Сохранить настройки</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Навигация по библиотеке -->
         <div class="library-nav">
             <button id="showPlaylistsBtn" class="library-btn">📋 Плейлисты</button>
