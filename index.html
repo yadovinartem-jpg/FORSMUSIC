@@ -65,7 +65,7 @@
                 </div>
                 
                 <div class="eq-sliders">
-                    <!-- 16 Гц -->
+                    <!-- 16 Гц (НОВЫЙ) -->
                     <div class="eq-slider">
                         <label>16 Гц</label>
                         <input type="range" id="eq16" min="-12" max="12" value="0" step="0.5">
@@ -142,7 +142,7 @@
                         <span id="eq16kVal" class="eq-value">0 dB</span>
                     </div>
                     
-                    <!-- 22 кГц -->
+                    <!-- 22 кГц (НОВЫЙ) -->
                     <div class="eq-slider">
                         <label>22 кГц</label>
                         <input type="range" id="eq22k" min="-12" max="12" value="0" step="0.5">
@@ -216,9 +216,14 @@
                     <button id="changePlaylistCoverBtn" class="small-btn">📷 Изменить обложку</button>
                 </div>
                 
-                <!-- Название и автор (изменяются сразу) -->
-                <input type="text" id="playlistEditName" placeholder="Название плейлиста" oninput="updatePlaylistName(this.value)">
-                <input type="text" id="playlistEditAuthor" placeholder="Автор" oninput="updatePlaylistAuthor(this.value)">
+                <!-- Название и автор -->
+                <input type="text" id="playlistEditName" placeholder="Название плейлиста">
+                <input type="text" id="playlistEditAuthor" placeholder="Автор">
+                
+                <div class="playlist-actions">
+                    <button id="renamePlaylistBtn" class="action-btn">📝 Переименовать</button>
+                    <button id="deletePlaylistBtn" class="action-btn delete">🗑️ Удалить плейлист</button>
+                </div>
                 
                 <h4>Треки в плейлисте:</h4>
                 <div id="playlistTracks" class="playlist-tracks">
