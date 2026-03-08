@@ -596,7 +596,7 @@ h2, h3 {
     gap: 15px;
     margin: 20px 0;
     max-height: 300px;
-    overflow-y: hidden; /* Убрал скролл */
+    overflow-y: auto;
     padding-right: 10px;
 }
 
