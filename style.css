@@ -41,8 +41,8 @@ h1 {
 .album-art {
     width: 100%;
     aspect-ratio: 1/1;
-    object-fit: cover;
     display: block;
+    background: linear-gradient(135deg, #32007d, #000000);
 }
 
 .track-info-header {
@@ -292,6 +292,9 @@ h2, h3 {
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .playlist-item:hover {
@@ -332,6 +335,8 @@ h2, h3 {
     border-radius: 12px;
     width: 90%;
     max-width: 400px;
+    max-height: 80vh;
+    overflow-y: auto;
 }
 
 .modal-content input {
@@ -346,6 +351,7 @@ h2, h3 {
 .modal-buttons {
     display: flex;
     gap: 10px;
+    margin-top: 15px;
 }
 
 .modal-buttons button {
@@ -362,9 +368,58 @@ h2, h3 {
     color: white;
 }
 
-#cancelPlaylistBtn {
+#cancelPlaylistBtn, #closePlaylistDetailBtn {
     background: #f44336;
     color: white;
+}
+
+/* Стили для детального просмотра плейлиста */
+.playlist-detail h4 {
+    margin: 15px 0 10px;
+    color: #32007d;
+}
+
+.playlist-tracks, .available-tracks {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.track-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.track-item:hover {
+    background: #f0f0f0;
+}
+
+.track-item .track-info {
+    flex: 1;
+}
+
+.track-item .add-btn {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.track-item .remove-btn {
+    background: #f44336;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
 }
 
 .clear-btn {
