@@ -41,11 +41,11 @@ app.use(express.json());
 // ========== MULTER ==========
 const upload = multer({ 
   storage: multer.memoryStorage(),
-  limits: { fileSize: 100 * 1024 * 1024 }
+  limits: { fileSize: 100 * 1024 * 1024 } // 100MB
 });
 
-// ========== ЯНДЕКС.ДИСК С ВАШИМ ТОКЕНОМ ==========
-const YANDEX_TOKEN = process.env.YANDEX_TOKEN;
+// ========== ЯНДЕКС.ДИСК ==========
+const YANDEX_TOKEN = process.env.YANDEX_TOKEN || 'y0__xCrtM7NAxj43T4g9LzY2BYwoZPOsQiuLwg5fhdGB1hQpqVllWS2bhOkWw';
 const YANDEX_API_URL = 'https://cloud-api.yandex.net/v1/disk';
 
 const yandexApi = axios.create({
@@ -55,7 +55,10 @@ const yandexApi = axios.create({
   }
 });
 
-// ========== ФУНКЦИИ ==========
+console.log('✅ Яндекс.Диск инициализирован');
+
+// ========== ФУНКЦИИ ДЛЯ РАБОТЫ С ЯНДЕКС.ДИСКОМ ==========
+
 async function getUploadLink(remotePath) {
   const response = await yandexApi.get('/resources/upload', {
     params: { path: remotePath, overwrite: true }
@@ -91,8 +94,11 @@ async function deleteFile(remotePath) {
   console.log('✅ Файл удалён с Яндекс.Диска');
 }
 
-function convertToDirectLink(publicUrl) {
-  return `https://getfile.dokpub.com/yandex/get/${publicUrl}`;
+async function getDownloadLink(remotePath) {
+  const response = await yandexApi.get('/resources/download', {
+    params: { path: remotePath }
+  });
+  return response.data.href;
 }
 
 async function uploadToYandex(fileBuffer, fileName) {
@@ -104,12 +110,10 @@ async function uploadToYandex(fileBuffer, fileName) {
   await uploadFile(uploadUrl, fileBuffer);
   await publishFile(remotePath);
   const fileInfo = await getFileInfo(remotePath);
-  const directUrl = convertToDirectLink(fileInfo.public_url);
   
   return {
     path: remotePath,
     publicUrl: fileInfo.public_url,
-    directUrl: directUrl,
     name: fileInfo.name,
     size: fileInfo.size
   };
@@ -151,6 +155,7 @@ function compressAudio(inputBuffer, inputFormat) {
 }
 
 // ========== ЭНДПОЙНТЫ ==========
+
 app.post('/api/upload', upload.single('audio'), async (req, res) => {
   console.log('📥 Получен запрос на загрузку');
   
@@ -173,7 +178,6 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
     res.json({
       success: true,
       file: {
-        url: yandexFile.directUrl,
         path: yandexFile.path,
         title: title || req.file.originalname,
         artist: artist || 'Unknown',
@@ -189,6 +193,67 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
       error: 'Upload failed',
       details: error.message 
     });
+  }
+});
+
+// ========== ИСПРАВЛЕННЫЙ ЭНДПОЙНТ ДЛЯ СТРИМИНГА ==========
+app.get('/api/stream/:path(*)', async (req, res) => {
+  try {
+    const remotePath = decodeURIComponent(req.params.path);
+    console.log('🎵 Стриминг файла:', remotePath);
+    
+    // Получаем временную ссылку на скачивание
+    const downloadUrl = await getDownloadLink(remotePath);
+    
+    // Устанавливаем правильные заголовки для стриминга
+    res.setHeader('Content-Type', 'audio/opus');
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Connection', 'keep-alive');
+    
+    // Добавляем заголовки для поддержки докачки
+    res.setHeader('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    // Создаём запрос с поддержкой частичной загрузки
+    const response = await axios({
+      method: 'get',
+      url: downloadUrl,
+      responseType: 'stream',
+      timeout: 30000, // 30 секунд таймаут
+      headers: {
+        'User-Agent': 'ForsityMusic/1.0'
+      }
+    });
+    
+    // Проверяем, есть ли заголовок с размером файла
+    if (response.headers['content-length']) {
+      res.setHeader('Content-Length', response.headers['content-length']);
+    }
+    
+    // Передаём поток клиенту
+    response.data.pipe(res);
+    
+    // Обработка ошибок потока
+    response.data.on('error', (err) => {
+      console.error('❌ Ошибка потока:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Stream error' });
+      }
+    });
+    
+    // Логируем успешное начало стриминга
+    response.data.on('data', (chunk) => {
+      console.log(`📦 Отправлено ${chunk.length} байт`);
+    });
+    
+  } catch (error) {
+    console.error('❌ Ошибка стриминга:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Streaming failed' });
+    }
   }
 });
 
