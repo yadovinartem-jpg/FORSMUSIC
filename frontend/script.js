@@ -135,35 +135,6 @@ loadTracks();
 // ========== ИНИЦИАЛИЗАЦИЯ ==========
 updatePlaylistsGrid();
 
-// ========== ГЛОБАЛЬНЫЕ ОБРАБОТЧИКИ АУДИО ==========
-audio.addEventListener('loadstart', () => {
-    console.log('🎵 Начало загрузки аудио');
-});
-
-audio.addEventListener('progress', () => {
-    console.log('📥 Загрузка прогрессирует');
-});
-
-audio.addEventListener('suspend', () => {
-    console.log('⏸️ Загрузка приостановлена');
-});
-
-audio.addEventListener('abort', () => {
-    console.log('⛔ Загрузка прервана');
-});
-
-audio.addEventListener('stalled', () => {
-    console.log('⏸️ Загрузка заблокирована');
-});
-
-audio.addEventListener('waiting', () => {
-    console.log('⏳ Ожидание данных...');
-});
-
-audio.addEventListener('canplay', () => {
-    console.log('✅ Можно воспроизводить');
-});
-
 // ========== ФУНКЦИИ ДЛЯ РИСОВАНИЯ ==========
 function drawGradientAlbumArt(canvas) {
     if (!canvas || !canvas.getContext) return;
@@ -518,7 +489,7 @@ function updateTracklist() {
     });
 }
 
-// ========== ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ ==========
+// ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ ==========
 function playTrack(index) {
     if (index >= 0 && index < tracks.length) {
         audio.pause();
@@ -533,8 +504,12 @@ function playTrack(index) {
         const streamUrl = `${API_URL}/stream/${encodeURIComponent(tracks[index].path)}`;
         console.log('▶️ Воспроизведение через прокси:', streamUrl);
         
+        // Полностью сбрасываем аудио элемент
         audio.src = '';
+        audio.removeAttribute('src');
         audio.load();
+        
+        // Устанавливаем новый источник
         audio.src = streamUrl;
         audio.load();
         
@@ -542,23 +517,42 @@ function playTrack(index) {
             shuffledIndices = shuffledIndices.filter(i => i !== index);
         }
         
+        // Обработчики событий
         audio.onerror = function(e) {
             console.error('❌ Audio error:', e);
             console.error('❌ Audio error code:', audio.error ? audio.error.code : 'unknown');
             console.error('❌ Audio error message:', audio.error ? audio.error.message : 'unknown');
-            isPlaying = false;
-            if (playPauseBtn) playPauseBtn.textContent = '▶️';
+            
+            // Пробуем альтернативный формат
+            console.log('🔄 Пробуем альтернативный формат...');
+            
+            // Пытаемся добавить type в источник
+            const audioSource = document.createElement('source');
+            audioSource.src = streamUrl;
+            audioSource.type = 'audio/mpeg'; // Пробуем MP3 как самый распространенный
+            audio.innerHTML = '';
+            audio.appendChild(audioSource);
+            audio.load();
+            
+            setTimeout(() => {
+                audio.play().then(() => {
+                    console.log('✅ Альтернативный формат сработал');
+                    isPlaying = true;
+                    if (playPauseBtn) playPauseBtn.textContent = '⏸️';
+                }).catch(err => {
+                    console.error('❌ Альтернативный формат тоже не сработал:', err);
+                    isPlaying = false;
+                    if (playPauseBtn) playPauseBtn.textContent = '▶️';
+                });
+            }, 500);
         };
         
-        audio.onplaying = function() {
-            console.log('▶️ Воспроизведение началось');
-            isPlaying = true;
-            if (playPauseBtn) playPauseBtn.textContent = '⏸️';
-        };
-        
-        setTimeout(() => {
+        audio.oncanplay = function() {
+            console.log('✅ Можно воспроизводить');
             audio.play().then(() => {
                 console.log('✅ Воспроизведение успешно');
+                isPlaying = true;
+                if (playPauseBtn) playPauseBtn.textContent = '⏸️';
                 updateTracklist();
                 updateAlbumArt(tracks[currentTrackIndex]);
                 
@@ -573,7 +567,22 @@ function playTrack(index) {
                 isPlaying = false;
                 if (playPauseBtn) playPauseBtn.textContent = '▶️';
             });
-        }, 300);
+        };
+        
+        audio.onplaying = function() {
+            console.log('▶️ Воспроизведение началось');
+            isPlaying = true;
+            if (playPauseBtn) playPauseBtn.textContent = '⏸️';
+        };
+        
+        // Таймаут на случай, если oncanplay не сработает
+        setTimeout(() => {
+            if (!isPlaying && audio.readyState >= 2) {
+                audio.play().catch(err => {
+                    console.error('❌ Таймаут воспроизведения:', err);
+                });
+            }
+        }, 2000);
     }
 }
 
