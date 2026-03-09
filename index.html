@@ -94,16 +94,21 @@
                 <div class="track-menu-list" id="trackMenuList">
                     <!-- Список плейлистов для добавления -->
                 </div>
+                <div class="track-menu-delete">
+                    <button id="deleteTrackBtn" class="delete-track-btn">🗑️ Удалить трек из коллекции</button>
+                </div>
             </div>
         </div>
 
         <!-- Обложка текущего трека -->
         <div class="album-art-container">
             <canvas id="albumArt" class="album-art" width="300" height="300"></canvas>
-            <div class="track-info-header">
-                <span id="currentTrackTitle">Нет трека</span>
-                <span id="currentTrackArtist"></span>
-            </div>
+        </div>
+        
+        <!-- Информация о текущем треке под обложкой -->
+        <div class="current-track-info">
+            <div id="currentTrackTitle" class="current-track-title">Нет трека</div>
+            <div id="currentTrackArtist" class="current-track-artist"></div>
         </div>
         
         <!-- Плеер -->
@@ -225,7 +230,7 @@
             </div>
         </div>
 
-        <!-- Список всех плейлистов (квадратики) - теперь показывается всегда -->
+        <!-- Список всех плейлистов (квадратики) -->
         <div id="playlistsGrid" class="playlists-grid">
             <!-- Плейлисты будут здесь -->
         </div>
