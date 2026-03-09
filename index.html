@@ -218,17 +218,17 @@
                 <canvas id="albumArt" class="album-art" width="300" height="300"></canvas>
             </div>
             
-            <!-- Информация о текущем треке под обложкой -->
-            <div class="current-track-info">
-                <div id="currentTrackTitle" class="current-track-title">Нет трека</div>
-                <div id="currentTrackArtist" class="current-track-artist"></div>
-            </div>
-            
-            <!-- Ползунок прогресса и кнопка эквалайзера -->
-            <div class="progress-eq-row">
-                <input type="range" id="progressBar" class="progress-bar" value="0" max="100">
+            <!-- Информация о текущем треке и кнопка эквалайзера -->
+            <div class="track-info-row">
+                <div class="current-track-info">
+                    <div id="currentTrackTitle" class="current-track-title">Нет трека</div>
+                    <div id="currentTrackArtist" class="current-track-artist"></div>
+                </div>
                 <button id="toggleEqBtn" class="eq-button" title="Эквалайзер">🎚️</button>
             </div>
+            
+            <!-- Ползунок прогресса -->
+            <input type="range" id="progressBar" class="progress-bar" value="0" max="100">
             
             <span id="timeDisplay" class="time-display">0:00 / 0:00</span>
             
