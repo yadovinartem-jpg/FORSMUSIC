@@ -540,6 +540,20 @@ function updatePlaylistsGrid() {
             const img = document.createElement('img');
             img.className = 'playlist-square-cover';
             img.src = playlist.cover;
+            img.onerror = () => {
+                // Если изображение не загрузилось, заменяем на canvas
+                const canvas = document.createElement('canvas');
+                canvas.className = 'playlist-square-cover';
+                canvas.width = 60;
+                canvas.height = 60;
+                const coverCtx = canvas.getContext('2d');
+                const gradient = coverCtx.createLinearGradient(0, 0, 60, 60);
+                gradient.addColorStop(0, '#32007d');
+                gradient.addColorStop(1, '#000000');
+                coverCtx.fillStyle = gradient;
+                coverCtx.fillRect(0, 0, 60, 60);
+                img.parentNode.replaceChild(canvas, img);
+            };
             coverHtml = img.outerHTML;
         } else {
             const canvas = document.createElement('canvas');
@@ -592,6 +606,7 @@ function openPlaylistEditor(playlistId = null) {
                 const img = new Image();
                 img.crossOrigin = 'Anonymous';
                 img.onload = () => drawImageAlbumArt(playlistCoverEdit, img);
+                img.onerror = () => drawGradientAlbumArt(playlistCoverEdit);
                 img.src = playlist.cover;
             } else {
                 drawGradientAlbumArt(playlistCoverEdit);
