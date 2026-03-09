@@ -247,6 +247,7 @@ body {
     border-radius: 8px;
     margin-bottom: 8px;
     background: linear-gradient(135deg, #32007d, #000000);
+    object-fit: cover;
 }
 
 .playlist-square-name {
@@ -398,77 +399,55 @@ body {
 }
 
 /* Меню троеточия */
-.track-menu {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-    backdrop-filter: blur(5px);
-}
-
-.track-menu.hidden {
-    display: none;
-}
-
 .track-menu-content {
-    background: #000000;
-    border: 1px solid #32007d;
-    border-radius: 12px;
-    padding: 20px;
-    width: 90%;
     max-width: 350px;
 }
 
-.track-menu-header {
+.track-menu-actions {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #333;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
 }
 
-.track-menu-header span {
-    color: white;
-    font-weight: 600;
-}
-
-.track-menu-list {
-    max-height: 300px;
-    overflow-y: auto;
-    margin-bottom: 15px;
-}
-
-.track-menu-delete {
-    border-top: 1px solid #333;
-    padding-top: 15px;
-}
-
-.delete-track-btn {
+.track-action-btn {
     width: 100%;
-    background: #f44336;
+    background: #32007d;
     color: white;
     border: none;
-    padding: 12px;
+    padding: 15px;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 16px;
     cursor: pointer;
     transition: all 0.3s;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-.delete-track-btn:hover {
-    background: #d32f2f;
+.track-action-btn.delete {
+    background: #f44336;
+}
+
+.track-action-btn:hover {
     transform: scale(1.02);
+    opacity: 0.9;
 }
 
-.playlist-menu-item {
-    padding: 12px;
+/* Меню выбора плейлиста */
+.playlist-choice-content {
+    max-width: 350px;
+}
+
+.playlist-choice-list {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 15px;
+}
+
+.playlist-choice-item {
+    padding: 15px;
     border-bottom: 1px solid #333;
     cursor: pointer;
     display: flex;
@@ -477,32 +456,31 @@ body {
     transition: background 0.2s;
 }
 
-.playlist-menu-item:hover {
+.playlist-choice-item:hover {
     background: #1a1a1a;
 }
 
-.playlist-menu-item .playlist-mini-cover {
-    width: 30px;
-    height: 30px;
-    border-radius: 4px;
+.playlist-choice-item .playlist-choice-cover {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
     background: linear-gradient(135deg, #32007d, #000000);
-    flex-shrink: 0;
     object-fit: cover;
 }
 
-.playlist-menu-item .playlist-menu-info {
+.playlist-choice-item .playlist-choice-info {
     flex: 1;
 }
 
-.playlist-menu-item .playlist-menu-name {
+.playlist-choice-item .playlist-choice-name {
     color: white;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
 }
 
-.playlist-menu-item .playlist-menu-check {
-    color: #4CAF50;
-    font-size: 18px;
+.playlist-choice-item .playlist-choice-count {
+    font-size: 12px;
+    color: #999;
 }
 
 /* Треклист */
@@ -762,13 +740,85 @@ body {
     display: none !important;
 }
 
-/* Стили для эквалайзера */
-.equalizer-section {
-    background: var(--tg-theme-secondary-bg-color, #fff);
+/* Стили для модальных окон */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: #000000;
     padding: 20px;
     border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border: 1px solid #32007d;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(50, 0, 125, 0.2);
+    padding-bottom: 10px;
+    border-bottom: 2px solid #32007d;
+}
+
+.modal-header h3,
+.modal-header span {
+    margin: 0;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #ffffff;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s;
+}
+
+.close-btn:hover {
+    background: #333;
+    color: #f44336;
+    transform: scale(1.1);
+}
+
+.hint {
+    font-size: 12px;
+    color: #999;
+    margin-top: 8px;
+    text-align: center;
+}
+
+/* Стили для эквалайзера */
+.eq-modal {
+    max-width: 450px;
 }
 
 .eq-q-control {
@@ -936,79 +986,6 @@ body {
 .eq-control-buttons button:hover {
     background: #4a1a9e;
     transform: scale(1.02);
-}
-
-/* Стили для модальных окон */
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    backdrop-filter: blur(5px);
-}
-
-.modal.hidden {
-    display: none;
-}
-
-.modal-content {
-    background: #000000;
-    padding: 20px;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 500px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    border: 1px solid #32007d;
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #32007d;
-}
-
-.modal-header h3 {
-    margin: 0;
-    color: #ffffff;
-}
-
-.close-btn {
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: #ffffff;
-    cursor: pointer;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: all 0.3s;
-}
-
-.close-btn:hover {
-    background: #333;
-    color: #f44336;
-    transform: scale(1.1);
-}
-
-.hint {
-    font-size: 12px;
-    color: #999;
-    margin-top: 8px;
-    text-align: center;
 }
 
 /* Стили для скроллбаров */
