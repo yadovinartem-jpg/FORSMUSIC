@@ -31,8 +31,17 @@ const coverFileInput = document.getElementById('coverFileInput');
 // Меню троеточия
 const trackMenu = document.getElementById('trackMenu');
 const closeTrackMenuBtn = document.getElementById('closeTrackMenuBtn');
-const trackMenuList = document.getElementById('trackMenuList');
+const showAddToPlaylistBtn = document.getElementById('showAddToPlaylistBtn');
 const deleteTrackBtn = document.getElementById('deleteTrackBtn');
+
+// Меню выбора плейлиста
+const playlistChoiceMenu = document.getElementById('playlistChoiceMenu');
+const closePlaylistChoiceBtn = document.getElementById('closePlaylistChoiceBtn');
+const playlistChoiceList = document.getElementById('playlistChoiceList');
+
+// Модальное окно эквалайзера
+const eqModal = document.getElementById('eqModal');
+const closeEqModalBtn = document.getElementById('closeEqModalBtn');
 
 // Плейлисты
 const playlistsGrid = document.getElementById('playlistsGrid');
@@ -56,8 +65,7 @@ const albumArt = document.getElementById('albumArt');
 const currentTrackTitle = document.getElementById('currentTrackTitle');
 const currentTrackArtist = document.getElementById('currentTrackArtist');
 
-// Эквалайзер
-const eqControls = document.getElementById('eqControls');
+// Эквалайзер элементы
 const qSlider = document.getElementById('qSlider');
 const qValue = document.getElementById('qValue');
 const applyMyPresetBtn = document.getElementById('applyMyPresetBtn');
@@ -380,67 +388,106 @@ function updateTracklist() {
 // ========== МЕНЮ ТРЕКА ==========
 function openTrackMenu(trackIndex) {
     currentTrackForMenu = trackIndex;
-    updateTrackMenu();
     trackMenu.classList.remove('hidden');
 }
 
-function updateTrackMenu() {
-    trackMenuList.innerHTML = '';
+closeTrackMenuBtn.addEventListener('click', () => {
+    trackMenu.classList.add('hidden');
+});
+
+// Закрытие меню при клике вне области
+trackMenu.addEventListener('click', (e) => {
+    if (e.target === trackMenu) {
+        trackMenu.classList.add('hidden');
+    }
+});
+
+// ========== ДОБАВЛЕНИЕ В ПЛЕЙЛИСТ ==========
+showAddToPlaylistBtn.addEventListener('click', () => {
+    trackMenu.classList.add('hidden');
+    updatePlaylistChoiceList();
+    playlistChoiceMenu.classList.remove('hidden');
+});
+
+closePlaylistChoiceBtn.addEventListener('click', () => {
+    playlistChoiceMenu.classList.add('hidden');
+});
+
+playlistChoiceMenu.addEventListener('click', (e) => {
+    if (e.target === playlistChoiceMenu) {
+        playlistChoiceMenu.classList.add('hidden');
+    }
+});
+
+function updatePlaylistChoiceList() {
+    playlistChoiceList.innerHTML = '';
     
     if (playlists.length === 0) {
         const div = document.createElement('div');
-        div.className = 'playlist-menu-item';
-        div.innerHTML = '<span style="color: #999; padding: 12px;">Нет плейлистов</span>';
-        trackMenuList.appendChild(div);
+        div.className = 'playlist-choice-item';
+        div.innerHTML = '<span style="color: #999; padding: 15px;">Нет плейлистов</span>';
+        playlistChoiceList.appendChild(div);
         return;
     }
     
     playlists.forEach(playlist => {
         const div = document.createElement('div');
-        div.className = 'playlist-menu-item';
+        div.className = 'playlist-choice-item';
         
-        // Мини-обложка плейлиста
+        // Мини-обложка
         let coverHtml = '';
         if (playlist.cover) {
             const img = document.createElement('img');
-            img.className = 'playlist-mini-cover';
+            img.className = 'playlist-choice-cover';
             img.src = playlist.cover;
             coverHtml = img.outerHTML;
         } else {
             const canvas = document.createElement('canvas');
-            canvas.className = 'playlist-mini-cover';
-            canvas.width = 30;
-            canvas.height = 30;
+            canvas.className = 'playlist-choice-cover';
+            canvas.width = 40;
+            canvas.height = 40;
             const coverCtx = canvas.getContext('2d');
-            const gradient = coverCtx.createLinearGradient(0, 0, 30, 30);
+            const gradient = coverCtx.createLinearGradient(0, 0, 40, 40);
             gradient.addColorStop(0, '#32007d');
             gradient.addColorStop(1, '#000000');
             coverCtx.fillStyle = gradient;
-            coverCtx.fillRect(0, 0, 30, 30);
+            coverCtx.fillRect(0, 0, 40, 40);
             coverHtml = canvas.outerHTML;
         }
         
-        const infoDiv = document.createElement('div');
-        infoDiv.className = 'playlist-menu-info';
-        infoDiv.innerHTML = `
-            <div class="playlist-menu-name">${playlist.name}</div>
-            <div style="font-size: 10px; color: #999;">${playlist.tracks.length} треков</div>
+        div.innerHTML = `
+            ${coverHtml}
+            <div class="playlist-choice-info">
+                <div class="playlist-choice-name">${playlist.name}</div>
+                <div class="playlist-choice-count">${playlist.tracks.length} треков</div>
+            </div>
         `;
         
-        div.innerHTML = coverHtml;
-        div.appendChild(infoDiv);
-        
         div.addEventListener('click', () => {
-            toggleTrackInPlaylist(playlist.id, currentTrackForMenu);
-            updateTrackMenu();
+            addTrackToPlaylist(playlist.id);
         });
         
-        trackMenuList.appendChild(div);
+        playlistChoiceList.appendChild(div);
     });
 }
 
-// Функция удаления трека
-function deleteTrackFromCollection() {
+function addTrackToPlaylist(playlistId) {
+    const playlist = playlists.find(p => p.id === playlistId);
+    if (!playlist || currentTrackForMenu === null) return;
+    
+    const track = tracks[currentTrackForMenu];
+    
+    if (!playlist.tracks.some(t => t.url === track.url)) {
+        playlist.tracks.push({...track});
+        localStorage.setItem('playlists', JSON.stringify(playlists));
+        updatePlaylistsGrid();
+    }
+    
+    playlistChoiceMenu.classList.add('hidden');
+}
+
+// ========== УДАЛЕНИЕ ТРЕКА ==========
+deleteTrackBtn.addEventListener('click', () => {
     if (currentTrackForMenu === null) return;
     
     const trackToDelete = tracks[currentTrackForMenu];
@@ -477,19 +524,6 @@ function deleteTrackFromCollection() {
     updatePlaylistsGrid();
     trackMenu.classList.add('hidden');
     currentTrackForMenu = null;
-}
-
-deleteTrackBtn.addEventListener('click', deleteTrackFromCollection);
-
-closeTrackMenuBtn.addEventListener('click', () => {
-    trackMenu.classList.add('hidden');
-});
-
-// Закрытие меню при клике вне области
-trackMenu.addEventListener('click', (e) => {
-    if (e.target === trackMenu) {
-        trackMenu.classList.add('hidden');
-    }
 });
 
 // ========== ПЛЕЙЛИСТЫ ==========
@@ -644,7 +678,10 @@ function updateAvailableTracksList() {
         });
         
         trackDiv.addEventListener('click', () => {
-            playTrack(tracks.findIndex(t => t.url === track.url));
+            const trackIndex = tracks.findIndex(t => t.url === track.url);
+            if (trackIndex !== -1) {
+                playTrack(trackIndex);
+            }
         });
         
         availableTracksList.appendChild(trackDiv);
@@ -738,23 +775,6 @@ function removeTrackFromCurrentPlaylist(trackIndex) {
     localStorage.setItem('playlists', JSON.stringify(playlists));
     updateAvailableTracksList();
     updatePlaylistTracksList();
-    updatePlaylistsGrid();
-}
-
-function toggleTrackInPlaylist(playlistId, trackIndex) {
-    const playlist = playlists.find(p => p.id === playlistId);
-    if (!playlist) return;
-    
-    const track = tracks[trackIndex];
-    
-    const existingIndex = playlist.tracks.findIndex(t => t.url === track.url);
-    if (existingIndex === -1) {
-        playlist.tracks.push({...track});
-    } else {
-        playlist.tracks.splice(existingIndex, 1);
-    }
-    
-    localStorage.setItem('playlists', JSON.stringify(playlists));
     updatePlaylistsGrid();
 }
 
@@ -1216,9 +1236,19 @@ function initEQSliders() {
     }
 }
 
-// ========== ЭКВАЛАЙЗЕР - УПРАВЛЕНИЕ ==========
+// ========== УПРАВЛЕНИЕ ЭКВАЛАЙЗЕРОМ ==========
 toggleEqBtn.addEventListener('click', () => {
-    eqControls.classList.toggle('hidden');
+    eqModal.classList.remove('hidden');
+});
+
+closeEqModalBtn.addEventListener('click', () => {
+    eqModal.classList.add('hidden');
+});
+
+eqModal.addEventListener('click', (e) => {
+    if (e.target === eqModal) {
+        eqModal.classList.add('hidden');
+    }
 });
 
 qSlider.addEventListener('input', (e) => {
