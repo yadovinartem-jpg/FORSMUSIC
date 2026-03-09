@@ -486,7 +486,7 @@ function updateTracklist() {
     });
 }
 
-// ========== ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ ==========
+// ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ ==========
 function playTrack(index) {
     if (index >= 0 && index < tracks.length) {
         audio.pause();
@@ -501,7 +501,12 @@ function playTrack(index) {
         
         const streamUrl = `${API_URL}/stream/${encodeURIComponent(tracks[index].path)}`;
         console.log('▶️ Воспроизведение через прокси:', streamUrl);
+        
+        // Важно: очищаем предыдущий источник и загружаем новый
+        audio.src = '';
+        audio.load();
         audio.src = streamUrl;
+        audio.load();
         
         if (shuffleMode) {
             shuffledIndices = shuffledIndices.filter(i => i !== index);
@@ -509,30 +514,56 @@ function playTrack(index) {
         
         audio.onerror = function(e) {
             console.error('❌ Audio error:', e);
+            console.error('❌ Audio error code:', audio.error ? audio.error.code : 'unknown');
+            console.error('❌ Audio error message:', audio.error ? audio.error.message : 'unknown');
             isPlaying = false;
             if (playPauseBtn) playPauseBtn.textContent = '▶️';
         };
         
-        audio.play().then(() => {
+        // Добавляем обработчики для отслеживания состояния
+        audio.onstalled = function() {
+            console.log('⏸️ Загрузка приостановлена');
+        };
+        
+        audio.onwaiting = function() {
+            console.log('⏳ Буферизация...');
+        };
+        
+        audio.oncanplay = function() {
+            console.log('✅ Можно воспроизводить');
+        };
+        
+        audio.onplaying = function() {
+            console.log('▶️ Воспроизведение началось');
             isPlaying = true;
             if (playPauseBtn) playPauseBtn.textContent = '⏸️';
-            updateTracklist();
-            updateAlbumArt(tracks[currentTrackIndex]);
-            
-            if (!isEQInitialized) {
-                setTimeout(() => {
-                    initEQ();
-                }, 200);
-            }
-            
-        }).catch(error => {
-            console.error('❌ Play error:', error);
-            isPlaying = false;
-            if (playPauseBtn) playPauseBtn.textContent = '▶️';
-        });
+        };
+        
+        audio.ontimeout = function() {
+            console.log('⏰ Таймаут загрузки');
+        };
+        
+        // Добавляем небольшую задержку перед воспроизведением для буферизации
+        setTimeout(() => {
+            audio.play().then(() => {
+                console.log('✅ Воспроизведение успешно');
+                updateTracklist();
+                updateAlbumArt(tracks[currentTrackIndex]);
+                
+                if (!isEQInitialized) {
+                    setTimeout(() => {
+                        initEQ();
+                    }, 200);
+                }
+                
+            }).catch(error => {
+                console.error('❌ Play error:', error);
+                isPlaying = false;
+                if (playPauseBtn) playPauseBtn.textContent = '▶️';
+            });
+        }, 300); // Даём время на буферизацию
     }
 }
-
 // ========== МЕНЮ ТРЕКА ==========
 function openTrackMenu(trackIndex) {
     currentTrackForMenu = trackIndex;
