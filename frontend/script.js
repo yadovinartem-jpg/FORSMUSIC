@@ -507,10 +507,30 @@ function playTrack(index) {
         // Полностью сбрасываем аудио элемент
         audio.src = '';
         audio.removeAttribute('src');
-        audio.load();
         
-        // Устанавливаем новый источник
-        audio.src = streamUrl;
+        // Удаляем все старые source элементы
+        while (audio.firstChild) {
+            audio.removeChild(audio.firstChild);
+        }
+        
+        // Создаем новый source элемент
+        const source = document.createElement('source');
+        source.src = streamUrl;
+        source.type = 'audio/ogg'; // Пробуем OGG как основной
+        audio.appendChild(source);
+        
+        // Добавляем еще один source на случай, если OGG не подойдет
+        const source2 = document.createElement('source');
+        source2.src = streamUrl;
+        source2.type = 'audio/opus';
+        audio.appendChild(source2);
+        
+        // И еще один как audio/mpeg
+        const source3 = document.createElement('source');
+        source3.src = streamUrl;
+        source3.type = 'audio/mpeg';
+        audio.appendChild(source3);
+        
         audio.load();
         
         if (shuffleMode) {
@@ -523,24 +543,12 @@ function playTrack(index) {
             console.error('❌ Audio error code:', audio.error ? audio.error.code : 'unknown');
             console.error('❌ Audio error message:', audio.error ? audio.error.message : 'unknown');
             
-            // Пробуем альтернативный формат
-            console.log('🔄 Пробуем альтернативный формат...');
-            
-            // Пытаемся добавить type в источник
-            const audioSource = document.createElement('source');
-            audioSource.src = streamUrl;
-            audioSource.type = 'audio/mpeg'; // Пробуем MP3 как самый распространенный
-            audio.innerHTML = '';
-            audio.appendChild(audioSource);
+            // Пробуем еще раз с явным указанием типа
+            console.log('🔄 Пробуем воспроизвести снова...');
             audio.load();
-            
             setTimeout(() => {
-                audio.play().then(() => {
-                    console.log('✅ Альтернативный формат сработал');
-                    isPlaying = true;
-                    if (playPauseBtn) playPauseBtn.textContent = '⏸️';
-                }).catch(err => {
-                    console.error('❌ Альтернативный формат тоже не сработал:', err);
+                audio.play().catch(err => {
+                    console.error('❌ Финальная ошибка:', err);
                     isPlaying = false;
                     if (playPauseBtn) playPauseBtn.textContent = '▶️';
                 });
