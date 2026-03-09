@@ -15,11 +15,25 @@ ffmpeg.setFfmpegPath(ffmpegStatic);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// Middleware с правильной настройкой CORS
 app.use(cors({
-  origin: process.env.CLIENT_URL || '*',
-  credentials: true
+  origin: ['https://yadovinartem-jpg.github.io', 'http://localhost:5500', 'http://127.0.0.1:5500'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
+// Добавляем middleware для обработки preflight запросов
+app.options('*', cors());
+
+// Явно добавляем заголовки для всех ответов
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  next();
+});
 app.use(express.json());
 
 // Настройка multer для временного хранения в памяти
