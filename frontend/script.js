@@ -90,8 +90,37 @@ let repeatMode = 0; // 0 - нет повтора, 1 - повтор плейли�
 let shuffleMode = false;
 let shuffledIndices = [];
 
+// ========== СОХРАНЕНИЕ ТРЕКОВ В LOCALSTORAGE ==========
+function saveTracks() {
+    // Сохраняем только нужные поля
+    const tracksToSave = tracks.map(track => ({
+        url: track.url,
+        title: track.title,
+        artist: track.artist,
+        albumArt: track.albumArt,
+        path: track.path
+    }));
+    localStorage.setItem('forsity_tracks', JSON.stringify(tracksToSave));
+    console.log('💾 Треки сохранены');
+}
+
+function loadTracks() {
+    const saved = localStorage.getItem('forsity_tracks');
+    if (saved) {
+        try {
+            tracks = JSON.parse(saved);
+            updateTracklist();
+            console.log('📂 Загружено треков:', tracks.length);
+        } catch (e) {
+            console.error('Ошибка загрузки треков:', e);
+        }
+    }
+}
+
+// Загружаем треки при старте
+loadTracks();
+
 // ========== ИНИЦИАЛИЗАЦИЯ ==========
-updateTracklist();
 updatePlaylistsGrid();
 
 // ========== ФУНКЦИИ ДЛЯ РИСОВАНИЯ ==========
@@ -187,7 +216,7 @@ async function extractMetadata(file) {
     }
 }
 
-// ========== ЗАГРУЗКА ТРЕКОВ ЧЕРЕЗ БЭКЕНД ==========
+// ========== ЗАГРУЗКА ТРЕКОВ ==========
 uploadBtn.addEventListener('click', () => {
     uploadModal.classList.remove('hidden');
     fileInput.value = '';
@@ -220,7 +249,7 @@ fileInput.addEventListener('change', async (e) => {
         const metadata = await extractMetadata(file);
         
         pendingTracks.push({
-            file: file, // Сохраняем оригинальный файл
+            file: file,
             title: metadata.title || fileName,
             artist: metadata.artist || '',
             albumArt: metadata.albumArt,
@@ -293,7 +322,6 @@ function updatePendingTracksList() {
     });
 }
 
-// Вспомогательные функции для индикации загрузки
 function showLoading(message) {
     const loader = document.createElement('div');
     loader.id = 'global-loader';
@@ -326,21 +354,19 @@ function hideLoading() {
     if (loader) loader.remove();
 }
 
+// ========== ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ ==========
 confirmUploadBtn.addEventListener('click', async () => {
-    // Показываем индикатор загрузки
     showLoading('Загрузка и сжатие треков...');
     
     let uploadedCount = 0;
     
     for (const track of pendingTracks) {
         try {
-            // Создаем FormData для отправки
             const formData = new FormData();
             formData.append('audio', track.file);
             formData.append('title', track.title);
             formData.append('artist', track.artist);
             
-            // Отправляем на сервер
             const response = await fetch(`${API_URL}/upload`, {
                 method: 'POST',
                 body: formData
@@ -352,14 +378,17 @@ confirmUploadBtn.addEventListener('click', async () => {
             
             const result = await response.json();
             
-            // Добавляем трек в плеер с ссылкой из Google Drive
+            // Добавляем трек в плеер
             tracks.push({
                 url: result.file.url,
                 title: result.file.title,
                 artist: result.file.artist,
-                albumArt: track.albumArt, // Сохраняем обложку из метаданных
-                driveId: result.file.driveId
+                albumArt: track.albumArt,
+                path: result.file.path
             });
+            
+            // Сохраняем в localStorage
+            saveTracks();
             
             uploadedCount++;
             
@@ -371,11 +400,6 @@ confirmUploadBtn.addEventListener('click', async () => {
     updateTracklist();
     uploadModal.classList.add('hidden');
     hideLoading();
-    
-    // Показываем уведомление о результате
-    if (uploadedCount > 0) {
-        showNotification(`Загружено ${uploadedCount} треков в облако`);
-    }
 });
 
 // ========== ТРЕКЛИСТ ==========
@@ -453,7 +477,6 @@ closeTrackMenuBtn.addEventListener('click', () => {
     trackMenu.classList.add('hidden');
 });
 
-// Закрытие меню при клике вне области
 trackMenu.addEventListener('click', (e) => {
     if (e.target === trackMenu) {
         trackMenu.classList.add('hidden');
@@ -550,14 +573,14 @@ deleteTrackBtn.addEventListener('click', async () => {
     
     const trackToDelete = tracks[currentTrackForMenu];
     
-    // Если у трека есть driveId, удаляем из Google Drive
-    if (trackToDelete.driveId) {
+    // Удаляем с Яндекс.Диска
+    if (trackToDelete.path) {
         try {
-            await fetch(`${API_URL}/track/${trackToDelete.driveId}`, {
+            await fetch(`${API_URL}/track/${encodeURIComponent(trackToDelete.path)}`, {
                 method: 'DELETE'
             });
         } catch (error) {
-            console.error('Ошибка удаления из Google Drive:', error);
+            console.error('Ошибка удаления с Яндекс.Диска:', error);
         }
     }
     
@@ -567,13 +590,11 @@ deleteTrackBtn.addEventListener('click', async () => {
     });
     localStorage.setItem('playlists', JSON.stringify(playlists));
     
-    // Очищаем временный URL (если это blob)
-    if (trackToDelete.url && trackToDelete.url.startsWith('blob:')) {
-        URL.revokeObjectURL(trackToDelete.url);
-    }
-    
     // Удаляем трек из основного списка
     tracks.splice(currentTrackForMenu, 1);
+    
+    // Сохраняем обновлённый список
+    saveTracks();
     
     // Если удаляли текущий играющий трек
     if (currentTrackIndex === currentTrackForMenu) {
@@ -609,7 +630,6 @@ function updatePlaylistsGrid() {
             img.className = 'playlist-square-cover';
             img.src = playlist.cover;
             img.onerror = function() {
-                // Если изображение не загрузилось, заменяем на canvas
                 const canvas = document.createElement('canvas');
                 canvas.className = 'playlist-square-cover';
                 canvas.width = 60;
@@ -868,14 +888,12 @@ savePlaylistBtn.addEventListener('click', () => {
     if (!name) return;
     
     if (currentPlaylistId) {
-        // Обновляем существующий
         const playlist = playlists.find(p => p.id === currentPlaylistId);
         if (playlist) {
             playlist.name = name;
             playlist.desc = desc;
         }
     } else {
-        // Создаем новый
         const newPlaylist = {
             id: Date.now().toString(),
             name: name,
