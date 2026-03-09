@@ -540,7 +540,7 @@ function updatePlaylistsGrid() {
             const img = document.createElement('img');
             img.className = 'playlist-square-cover';
             img.src = playlist.cover;
-            img.onerror = () => {
+            img.onerror = function() {
                 // Если изображение не загрузилось, заменяем на canvas
                 const canvas = document.createElement('canvas');
                 canvas.className = 'playlist-square-cover';
@@ -552,7 +552,7 @@ function updatePlaylistsGrid() {
                 gradient.addColorStop(1, '#000000');
                 coverCtx.fillStyle = gradient;
                 coverCtx.fillRect(0, 0, 60, 60);
-                img.parentNode.replaceChild(canvas, img);
+                this.parentNode.replaceChild(canvas, this);
             };
             coverHtml = img.outerHTML;
         } else {
