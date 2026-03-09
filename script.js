@@ -84,7 +84,7 @@ updateTracklist();
 updatePlaylistsGrid();
 
 // ========== ФУНКЦИИ ДЛЯ РИСОВАНИЯ ==========
-function drawGradientAlbumArt(canvas, text = 'FOR SITY') {
+function drawGradientAlbumArt(canvas) {
     if (!canvas || !canvas.getContext) return;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -105,7 +105,7 @@ function drawImageAlbumArt(canvas, img) {
 
 // Рисуем стандартную обложку
 if (albumArt) drawGradientAlbumArt(albumArt);
-if (playlistCoverEdit) drawGradientAlbumArt(playlistCoverEdit, 'Плейлист');
+if (playlistCoverEdit) drawGradientAlbumArt(playlistCoverEdit);
 
 // ========== ФУНКЦИИ ДЛЯ РАБОТЫ С MP3 ==========
 function loadJsMediaTags() {
@@ -249,31 +249,29 @@ function updatePendingTracksList() {
         coverCanvas.width = 50;
         coverCanvas.height = 50;
         
-        // Создаем изображение для обложки
-        const drawCover = () => {
-            if (track.albumArt) {
-                const img = new Image();
-                img.crossOrigin = 'Anonymous';
-                img.onload = () => {
-                    const coverCtx = coverCanvas.getContext('2d');
-                    coverCtx.drawImage(img, 0, 0, 50, 50);
-                };
-                img.src = track.albumArt;
-            } else {
+        // Рисуем обложку
+        if (track.albumArt) {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
                 const coverCtx = coverCanvas.getContext('2d');
-                const gradient = coverCtx.createLinearGradient(0, 0, 50, 50);
-                gradient.addColorStop(0, '#32007d');
-                gradient.addColorStop(1, '#000000');
-                coverCtx.fillStyle = gradient;
-                coverCtx.fillRect(0, 0, 50, 50);
-            }
-        };
+                coverCtx.drawImage(img, 0, 0, 50, 50);
+            };
+            img.src = track.albumArt;
+        } else {
+            const coverCtx = coverCanvas.getContext('2d');
+            const gradient = coverCtx.createLinearGradient(0, 0, 50, 50);
+            gradient.addColorStop(0, '#32007d');
+            gradient.addColorStop(1, '#000000');
+            coverCtx.fillStyle = gradient;
+            coverCtx.fillRect(0, 0, 50, 50);
+        }
         
-        drawCover();
+        const coverHtml = coverCanvas.outerHTML;
         
         trackDiv.innerHTML = `
             <div class="pending-track-header">
-                ${coverCanvas.outerHTML}
+                ${coverHtml}
                 <div class="pending-track-info">
                     <div class="pending-track-title">${track.title}</div>
                     <div class="pending-track-filename">${track.fileName}</div>
@@ -603,7 +601,7 @@ function openPlaylistEditor(playlistId = null) {
                 img.onload = () => drawImageAlbumArt(playlistCoverEdit, img);
                 img.src = playlist.cover;
             } else {
-                drawGradientAlbumArt(playlistCoverEdit, playlist.name || 'Плейлист');
+                drawGradientAlbumArt(playlistCoverEdit);
             }
             
             deletePlaylistBtn.classList.remove('hidden');
@@ -612,7 +610,7 @@ function openPlaylistEditor(playlistId = null) {
         playlistModalTitle.textContent = 'Создать плейлист';
         playlistNameInput.value = '';
         playlistDescInput.value = '';
-        drawGradientAlbumArt(playlistCoverEdit, 'Новый плейлист');
+        drawGradientAlbumArt(playlistCoverEdit);
         deletePlaylistBtn.classList.add('hidden');
     }
     
