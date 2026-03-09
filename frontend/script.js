@@ -2,6 +2,9 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
+// Адрес бэкенд-сервера (ваш URL из Codespace)
+const API_URL = 'https://stunning-enigma-7vj6wv7x996vhx5px-3000.app.github.dev/api';
+
 // ========== ЭЛЕМЕНТЫ ==========
 // Шапка
 const uploadBtn = document.getElementById('uploadBtn');
@@ -184,7 +187,7 @@ async function extractMetadata(file) {
     }
 }
 
-// ========== ЗАГРУЗКА ТРЕКОВ ==========
+// ========== ЗАГРУЗКА ТРЕКОВ ЧЕРЕЗ БЭКЕНД ==========
 uploadBtn.addEventListener('click', () => {
     uploadModal.classList.remove('hidden');
     fileInput.value = '';
@@ -195,7 +198,6 @@ uploadBtn.addEventListener('click', () => {
 
 closeUploadModalBtn.addEventListener('click', () => {
     uploadModal.classList.add('hidden');
-    // Очищаем временные URL
     pendingTracks.forEach(track => {
         if (track.url && track.url.startsWith('blob:')) {
             URL.revokeObjectURL(track.url);
@@ -207,38 +209,24 @@ fileInput.addEventListener('change', async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     
-    // Очищаем предыдущие временные URL
-    pendingTracks.forEach(track => {
-        if (track.url && track.url.startsWith('blob:')) {
-            URL.revokeObjectURL(track.url);
-        }
-    });
-    
     pendingTracks = [];
     
-    // Создаем массив промисов для параллельной обработки
-    const metadataPromises = files.map(async (file) => {
+    for (const file of files) {
         if (!file.type.includes('audio/mpeg') && !file.name.endsWith('.mp3')) {
-            return null;
+            continue;
         }
         
-        const fileUrl = URL.createObjectURL(file);
         const fileName = file.name.replace('.mp3', '').replace('.MP3', '');
-        
         const metadata = await extractMetadata(file);
         
-        return {
-            url: fileUrl,
+        pendingTracks.push({
+            file: file, // Сохраняем оригинальный файл
             title: metadata.title || fileName,
             artist: metadata.artist || '',
             albumArt: metadata.albumArt,
             fileName: fileName
-        };
-    });
-    
-    // Ждем завершения всех промисов
-    const results = await Promise.all(metadataPromises);
-    pendingTracks = results.filter(track => track !== null);
+        });
+    }
     
     updatePendingTracksList();
     confirmUploadBtn.disabled = pendingTracks.length === 0;
@@ -305,19 +293,89 @@ function updatePendingTracksList() {
     });
 }
 
-confirmUploadBtn.addEventListener('click', () => {
-    // Добавляем все подтвержденные треки в начало основного списка (чтобы новые были сверху)
-    const newTracks = pendingTracks.map(track => ({
-        url: track.url,
-        title: track.title,
-        artist: track.artist,
-        albumArt: track.albumArt
-    }));
+// Вспомогательные функции для индикации загрузки
+function showLoading(message) {
+    const loader = document.createElement('div');
+    loader.id = 'global-loader';
+    loader.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        color: white;
+        font-size: 18px;
+        backdrop-filter: blur(5px);
+    `;
+    loader.innerHTML = `
+        <div style="text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 20px;">⏳</div>
+            <div>${message}</div>
+        </div>
+    `;
+    document.body.appendChild(loader);
+}
+
+function hideLoading() {
+    const loader = document.getElementById('global-loader');
+    if (loader) loader.remove();
+}
+
+confirmUploadBtn.addEventListener('click', async () => {
+    // Показываем индикатор загрузки
+    showLoading('Загрузка и сжатие треков...');
     
-    tracks = [...newTracks, ...tracks];
+    let uploadedCount = 0;
+    
+    for (const track of pendingTracks) {
+        try {
+            // Создаем FormData для отправки
+            const formData = new FormData();
+            formData.append('audio', track.file);
+            formData.append('title', track.title);
+            formData.append('artist', track.artist);
+            
+            // Отправляем на сервер
+            const response = await fetch(`${API_URL}/upload`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error('Ошибка загрузки');
+            }
+            
+            const result = await response.json();
+            
+            // Добавляем трек в плеер с ссылкой из Google Drive
+            tracks.push({
+                url: result.file.url,
+                title: result.file.title,
+                artist: result.file.artist,
+                albumArt: track.albumArt, // Сохраняем обложку из метаданных
+                driveId: result.file.driveId
+            });
+            
+            uploadedCount++;
+            
+        } catch (error) {
+            console.error('Ошибка загрузки трека:', error);
+        }
+    }
     
     updateTracklist();
     uploadModal.classList.add('hidden');
+    hideLoading();
+    
+    // Показываем уведомление о результате
+    if (uploadedCount > 0) {
+        showNotification(`Загружено ${uploadedCount} треков в облако`);
+    }
 });
 
 // ========== ТРЕКЛИСТ ==========
@@ -487,10 +545,21 @@ function addTrackToPlaylist(playlistId) {
 }
 
 // ========== УДАЛЕНИЕ ТРЕКА ==========
-deleteTrackBtn.addEventListener('click', () => {
+deleteTrackBtn.addEventListener('click', async () => {
     if (currentTrackForMenu === null) return;
     
     const trackToDelete = tracks[currentTrackForMenu];
+    
+    // Если у трека есть driveId, удаляем из Google Drive
+    if (trackToDelete.driveId) {
+        try {
+            await fetch(`${API_URL}/track/${trackToDelete.driveId}`, {
+                method: 'DELETE'
+            });
+        } catch (error) {
+            console.error('Ошибка удаления из Google Drive:', error);
+        }
+    }
     
     // Удаляем трек из всех плейлистов
     playlists.forEach(playlist => {
@@ -498,7 +567,7 @@ deleteTrackBtn.addEventListener('click', () => {
     });
     localStorage.setItem('playlists', JSON.stringify(playlists));
     
-    // Очищаем временный URL
+    // Очищаем временный URL (если это blob)
     if (trackToDelete.url && trackToDelete.url.startsWith('blob:')) {
         URL.revokeObjectURL(trackToDelete.url);
     }
@@ -516,7 +585,6 @@ deleteTrackBtn.addEventListener('click', () => {
         progressBar.value = 0;
         timeDisplay.textContent = '0:00 / 0:00';
     } else if (currentTrackIndex > currentTrackForMenu) {
-        // Если удаляли трек до текущего, сдвигаем индекс
         currentTrackIndex--;
     }
     
@@ -1360,6 +1428,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
     tg.ready();
 });
+
+// Универсальная функция показа уведомлений
+function showNotification(message) {
+    if (typeof tg.showAlert === 'function') {
+        tg.showAlert(message);
+    } else if (typeof tg.showPopup === 'function') {
+        tg.showPopup({
+            title: 'FORSITY MUSIC',
+            message: message,
+            buttons: [{ type: 'ok' }]
+        });
+    } else {
+        alert(message);
+    }
+}
 
 // Очистка временных ссылок при закрытии
 window.addEventListener('beforeunload', () => {
