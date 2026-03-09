@@ -32,6 +32,7 @@ const coverFileInput = document.getElementById('coverFileInput');
 const trackMenu = document.getElementById('trackMenu');
 const closeTrackMenuBtn = document.getElementById('closeTrackMenuBtn');
 const trackMenuList = document.getElementById('trackMenuList');
+const deleteTrackBtn = document.getElementById('deleteTrackBtn');
 
 // Плейлисты
 const playlistsGrid = document.getElementById('playlistsGrid');
@@ -93,19 +94,6 @@ function drawGradientAlbumArt(canvas, text = 'FOR SITY') {
     gradient.addColorStop(1, '#000000');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `bold ${canvas.width/12}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    const words = text.split(' ');
-    if (words.length > 2) {
-        ctx.fillText(words.slice(0, 2).join(' '), canvas.width/2, canvas.height/2 - 20);
-        ctx.fillText(words.slice(2).join(' '), canvas.width/2, canvas.height/2 + 20);
-    } else {
-        ctx.fillText(text, canvas.width/2, canvas.height/2);
-    }
 }
 
 function drawImageAlbumArt(canvas, img) {
@@ -116,7 +104,7 @@ function drawImageAlbumArt(canvas, img) {
 }
 
 // Рисуем стандартную обложку
-if (albumArt) drawGradientAlbumArt(albumArt, 'FOR SITY');
+if (albumArt) drawGradientAlbumArt(albumArt);
 if (playlistCoverEdit) drawGradientAlbumArt(playlistCoverEdit, 'Плейлист');
 
 // ========== ФУНКЦИИ ДЛЯ РАБОТЫ С MP3 ==========
@@ -278,12 +266,6 @@ function updatePendingTracksList() {
                 gradient.addColorStop(1, '#000000');
                 coverCtx.fillStyle = gradient;
                 coverCtx.fillRect(0, 0, 50, 50);
-                
-                coverCtx.fillStyle = '#ffffff';
-                coverCtx.font = 'bold 14px Arial';
-                coverCtx.textAlign = 'center';
-                coverCtx.textBaseline = 'middle';
-                coverCtx.fillText(track.title.substring(0, 2).toUpperCase(), 25, 25);
             }
         };
         
@@ -381,12 +363,6 @@ function updateTracklist() {
             gradient.addColorStop(1, '#000000');
             miniCtx.fillStyle = gradient;
             miniCtx.fillRect(0, 0, 40, 40);
-            
-            miniCtx.fillStyle = '#ffffff';
-            miniCtx.font = 'bold 12px Arial';
-            miniCtx.textAlign = 'center';
-            miniCtx.textBaseline = 'middle';
-            miniCtx.fillText(track.title.substring(0, 2).toUpperCase(), 20, 20);
         }
         
         li.appendChild(miniCover);
@@ -488,6 +464,48 @@ function updateTrackMenu() {
         trackMenuList.appendChild(div);
     });
 }
+
+// Функция удаления трека
+function deleteTrackFromCollection() {
+    if (currentTrackForMenu === null) return;
+    
+    const trackToDelete = tracks[currentTrackForMenu];
+    
+    // Удаляем трек из всех плейлистов
+    playlists.forEach(playlist => {
+        playlist.tracks = playlist.tracks.filter(t => t.url !== trackToDelete.url);
+    });
+    localStorage.setItem('playlists', JSON.stringify(playlists));
+    
+    // Очищаем временный URL
+    if (trackToDelete.url && trackToDelete.url.startsWith('blob:')) {
+        URL.revokeObjectURL(trackToDelete.url);
+    }
+    
+    // Удаляем трек из основного списка
+    tracks.splice(currentTrackForMenu, 1);
+    
+    // Если удаляли текущий играющий трек
+    if (currentTrackIndex === currentTrackForMenu) {
+        audio.pause();
+        isPlaying = false;
+        playPauseBtn.textContent = '▶️';
+        currentTrackIndex = -1;
+        updateAlbumArt(null);
+        progressBar.value = 0;
+        timeDisplay.textContent = '0:00 / 0:00';
+    } else if (currentTrackIndex > currentTrackForMenu) {
+        // Если удаляли трек до текущего, сдвигаем индекс
+        currentTrackIndex--;
+    }
+    
+    updateTracklist();
+    updatePlaylistsGrid();
+    trackMenu.classList.add('hidden');
+    currentTrackForMenu = null;
+}
+
+deleteTrackBtn.addEventListener('click', deleteTrackFromCollection);
 
 closeTrackMenuBtn.addEventListener('click', () => {
     trackMenu.classList.add('hidden');
@@ -866,10 +884,10 @@ function updateAlbumArt(track) {
         const img = new Image();
         img.crossOrigin = 'Anonymous';
         img.onload = () => drawImageAlbumArt(albumArt, img);
-        img.onerror = () => drawGradientAlbumArt(albumArt, track.title || 'FOR SITY');
+        img.onerror = () => drawGradientAlbumArt(albumArt);
         img.src = track.albumArt;
     } else {
-        drawGradientAlbumArt(albumArt, track ? track.title : 'FOR SITY');
+        drawGradientAlbumArt(albumArt);
     }
     
     if (track) {
