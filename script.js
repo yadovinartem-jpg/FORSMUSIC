@@ -48,6 +48,7 @@ const progressBar = document.getElementById('progressBar');
 const timeDisplay = document.getElementById('timeDisplay');
 const repeatBtn = document.getElementById('repeatBtn');
 const shuffleBtn = document.getElementById('shuffleBtn');
+const toggleEqBtn = document.getElementById('toggleEqBtn');
 const volumeSlider = document.getElementById('volumeSlider');
 const volumeIcon = document.getElementById('volumeIcon');
 const volumePercent = document.getElementById('volumePercent');
@@ -56,10 +57,9 @@ const currentTrackTitle = document.getElementById('currentTrackTitle');
 const currentTrackArtist = document.getElementById('currentTrackArtist');
 
 // Эквалайзер
+const eqControls = document.getElementById('eqControls');
 const qSlider = document.getElementById('qSlider');
 const qValue = document.getElementById('qValue');
-const toggleEqBtn = document.getElementById('toggleEqBtn');
-const eqControls = document.getElementById('eqControls');
 const applyMyPresetBtn = document.getElementById('applyMyPresetBtn');
 const resetEqBtn = document.getElementById('resetEqBtn');
 const saveEqBtn = document.getElementById('saveEqBtn');
@@ -244,30 +244,25 @@ function updatePendingTracksList() {
         trackDiv.className = 'pending-track-item';
         
         // Мини-обложка
-        const coverCanvas = document.createElement('canvas');
-        coverCanvas.className = 'pending-track-cover';
-        coverCanvas.width = 50;
-        coverCanvas.height = 50;
-        
-        // Рисуем обложку
+        let coverHtml = '';
         if (track.albumArt) {
-            const img = new Image();
-            img.crossOrigin = 'Anonymous';
-            img.onload = () => {
-                const coverCtx = coverCanvas.getContext('2d');
-                coverCtx.drawImage(img, 0, 0, 50, 50);
-            };
+            const img = document.createElement('img');
+            img.className = 'pending-track-cover';
             img.src = track.albumArt;
+            coverHtml = img.outerHTML;
         } else {
-            const coverCtx = coverCanvas.getContext('2d');
+            const canvas = document.createElement('canvas');
+            canvas.className = 'pending-track-cover';
+            canvas.width = 50;
+            canvas.height = 50;
+            const coverCtx = canvas.getContext('2d');
             const gradient = coverCtx.createLinearGradient(0, 0, 50, 50);
             gradient.addColorStop(0, '#32007d');
             gradient.addColorStop(1, '#000000');
             coverCtx.fillStyle = gradient;
             coverCtx.fillRect(0, 0, 50, 50);
+            coverHtml = canvas.outerHTML;
         }
-        
-        const coverHtml = coverCanvas.outerHTML;
         
         trackDiv.innerHTML = `
             <div class="pending-track-header">
@@ -341,46 +336,40 @@ function updateTracklist() {
         }
         
         // Мини-обложка
-        const miniCover = document.createElement('canvas');
-        miniCover.className = 'track-mini-cover';
-        miniCover.width = 40;
-        miniCover.height = 40;
-        
+        let miniCoverHtml = '';
         if (track.albumArt) {
-            const img = new Image();
-            img.crossOrigin = 'Anonymous';
-            img.onload = () => {
-                const miniCtx = miniCover.getContext('2d');
-                miniCtx.drawImage(img, 0, 0, 40, 40);
-            };
+            const img = document.createElement('img');
+            img.className = 'track-mini-cover';
             img.src = track.albumArt;
+            miniCoverHtml = img.outerHTML;
         } else {
-            const miniCtx = miniCover.getContext('2d');
+            const canvas = document.createElement('canvas');
+            canvas.className = 'track-mini-cover';
+            canvas.width = 40;
+            canvas.height = 40;
+            const miniCtx = canvas.getContext('2d');
             const gradient = miniCtx.createLinearGradient(0, 0, 40, 40);
             gradient.addColorStop(0, '#32007d');
             gradient.addColorStop(1, '#000000');
             miniCtx.fillStyle = gradient;
             miniCtx.fillRect(0, 0, 40, 40);
+            miniCoverHtml = canvas.outerHTML;
         }
         
-        li.appendChild(miniCover);
-        
-        const trackInfo = document.createElement('div');
-        trackInfo.className = 'track-info';
-        trackInfo.innerHTML = `
-            <span class="track-title">${track.title || 'Без названия'}</span>
-            <span class="track-artist">${track.artist || ''}</span>
+        li.innerHTML = `
+            ${miniCoverHtml}
+            <div class="track-info">
+                <span class="track-title">${track.title || 'Без названия'}</span>
+                <span class="track-artist">${track.artist || ''}</span>
+            </div>
+            <button class="track-menu-btn">⋮</button>
         `;
-        li.appendChild(trackInfo);
         
-        const menuBtn = document.createElement('button');
-        menuBtn.className = 'track-menu-btn';
-        menuBtn.innerHTML = '⋮';
+        const menuBtn = li.querySelector('.track-menu-btn');
         menuBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             openTrackMenu(index);
         });
-        li.appendChild(menuBtn);
         
         li.addEventListener('click', () => playTrack(index));
         
@@ -411,29 +400,25 @@ function updateTrackMenu() {
         div.className = 'playlist-menu-item';
         
         // Мини-обложка плейлиста
-        const coverCanvas = document.createElement('canvas');
-        coverCanvas.className = 'playlist-mini-cover';
-        coverCanvas.width = 30;
-        coverCanvas.height = 30;
-        
+        let coverHtml = '';
         if (playlist.cover) {
-            const img = new Image();
-            img.crossOrigin = 'Anonymous';
-            img.onload = () => {
-                const coverCtx = coverCanvas.getContext('2d');
-                coverCtx.drawImage(img, 0, 0, 30, 30);
-            };
+            const img = document.createElement('img');
+            img.className = 'playlist-mini-cover';
             img.src = playlist.cover;
+            coverHtml = img.outerHTML;
         } else {
-            const coverCtx = coverCanvas.getContext('2d');
+            const canvas = document.createElement('canvas');
+            canvas.className = 'playlist-mini-cover';
+            canvas.width = 30;
+            canvas.height = 30;
+            const coverCtx = canvas.getContext('2d');
             const gradient = coverCtx.createLinearGradient(0, 0, 30, 30);
             gradient.addColorStop(0, '#32007d');
             gradient.addColorStop(1, '#000000');
             coverCtx.fillStyle = gradient;
             coverCtx.fillRect(0, 0, 30, 30);
+            coverHtml = canvas.outerHTML;
         }
-        
-        div.appendChild(coverCanvas);
         
         const infoDiv = document.createElement('div');
         infoDiv.className = 'playlist-menu-info';
@@ -441,18 +426,9 @@ function updateTrackMenu() {
             <div class="playlist-menu-name">${playlist.name}</div>
             <div style="font-size: 10px; color: #999;">${playlist.tracks.length} треков</div>
         `;
+        
+        div.innerHTML = coverHtml;
         div.appendChild(infoDiv);
-        
-        // Проверяем, есть ли трек уже в плейлисте
-        const track = tracks[currentTrackForMenu];
-        const isInPlaylist = playlist.tracks.some(t => t.url === track.url);
-        
-        if (isInPlaylist) {
-            const checkSpan = document.createElement('span');
-            checkSpan.className = 'playlist-menu-check';
-            checkSpan.textContent = '✓';
-            div.appendChild(checkSpan);
-        }
         
         div.addEventListener('click', () => {
             toggleTrackInPlaylist(playlist.id, currentTrackForMenu);
@@ -525,39 +501,31 @@ function updatePlaylistsGrid() {
         square.className = 'playlist-square';
         
         // Обложка
-        const coverCanvas = document.createElement('canvas');
-        coverCanvas.className = 'playlist-square-cover';
-        coverCanvas.width = 60;
-        coverCanvas.height = 60;
-        
+        let coverHtml = '';
         if (playlist.cover) {
-            const img = new Image();
-            img.crossOrigin = 'Anonymous';
-            img.onload = () => {
-                const coverCtx = coverCanvas.getContext('2d');
-                coverCtx.drawImage(img, 0, 0, 60, 60);
-            };
+            const img = document.createElement('img');
+            img.className = 'playlist-square-cover';
             img.src = playlist.cover;
+            coverHtml = img.outerHTML;
         } else {
-            const coverCtx = coverCanvas.getContext('2d');
+            const canvas = document.createElement('canvas');
+            canvas.className = 'playlist-square-cover';
+            canvas.width = 60;
+            canvas.height = 60;
+            const coverCtx = canvas.getContext('2d');
             const gradient = coverCtx.createLinearGradient(0, 0, 60, 60);
             gradient.addColorStop(0, '#32007d');
             gradient.addColorStop(1, '#000000');
             coverCtx.fillStyle = gradient;
             coverCtx.fillRect(0, 0, 60, 60);
+            coverHtml = canvas.outerHTML;
         }
         
-        square.appendChild(coverCanvas);
-        
-        const nameDiv = document.createElement('div');
-        nameDiv.className = 'playlist-square-name';
-        nameDiv.textContent = playlist.name;
-        square.appendChild(nameDiv);
-        
-        const countDiv = document.createElement('div');
-        countDiv.className = 'playlist-square-count';
-        countDiv.textContent = `${playlist.tracks.length} треков`;
-        square.appendChild(countDiv);
+        square.innerHTML = `
+            ${coverHtml}
+            <div class="playlist-square-name">${playlist.name}</div>
+            <div class="playlist-square-count">${playlist.tracks.length} треков</div>
+        `;
         
         square.addEventListener('click', () => openPlaylistEditor(playlist.id));
         
@@ -568,19 +536,10 @@ function updatePlaylistsGrid() {
     const newSquare = document.createElement('div');
     newSquare.className = 'playlist-square';
     newSquare.style.background = '#1a1a1a';
-    
-    const plusDiv = document.createElement('div');
-    plusDiv.style.fontSize = '30px';
-    plusDiv.style.color = '#666';
-    plusDiv.style.marginBottom = '5px';
-    plusDiv.textContent = '➕';
-    newSquare.appendChild(plusDiv);
-    
-    const newNameDiv = document.createElement('div');
-    newNameDiv.className = 'playlist-square-name';
-    newNameDiv.textContent = 'Создать';
-    newSquare.appendChild(newNameDiv);
-    
+    newSquare.innerHTML = `
+        <div style="font-size: 30px; color: #666; margin-bottom: 5px;">➕</div>
+        <div class="playlist-square-name">Создать</div>
+    `;
     newSquare.addEventListener('click', () => openPlaylistEditor());
     playlistsGrid.appendChild(newSquare);
 }
@@ -638,41 +597,36 @@ function updateAvailableTracksList() {
         trackDiv.className = 'playlist-track-item';
         
         // Мини-обложка
-        const miniCover = document.createElement('canvas');
-        miniCover.className = 'track-mini-cover';
-        miniCover.width = 30;
-        miniCover.height = 30;
-        
+        let miniCoverHtml = '';
         if (track.albumArt) {
-            const img = new Image();
-            img.crossOrigin = 'Anonymous';
-            img.onload = () => {
-                const miniCtx = miniCover.getContext('2d');
-                miniCtx.drawImage(img, 0, 0, 30, 30);
-            };
+            const img = document.createElement('img');
+            img.className = 'track-mini-cover';
             img.src = track.albumArt;
+            miniCoverHtml = img.outerHTML;
         } else {
-            const miniCtx = miniCover.getContext('2d');
+            const canvas = document.createElement('canvas');
+            canvas.className = 'track-mini-cover';
+            canvas.width = 30;
+            canvas.height = 30;
+            const miniCtx = canvas.getContext('2d');
             const gradient = miniCtx.createLinearGradient(0, 0, 30, 30);
             gradient.addColorStop(0, '#32007d');
             gradient.addColorStop(1, '#000000');
             miniCtx.fillStyle = gradient;
             miniCtx.fillRect(0, 0, 30, 30);
+            miniCoverHtml = canvas.outerHTML;
         }
         
-        trackDiv.appendChild(miniCover);
-        
-        const trackInfo = document.createElement('div');
-        trackInfo.className = 'track-info';
-        trackInfo.innerHTML = `
-            <span class="track-title">${track.title}</span>
-            <span class="track-artist">${track.artist || ''}</span>
+        trackDiv.innerHTML = `
+            ${miniCoverHtml}
+            <div class="track-info">
+                <span class="track-title">${track.title}</span>
+                <span class="track-artist">${track.artist || ''}</span>
+            </div>
+            <button class="add-to-playlist">+</button>
         `;
-        trackDiv.appendChild(trackInfo);
         
-        const addBtn = document.createElement('button');
-        addBtn.className = 'add-to-playlist';
-        addBtn.textContent = '+';
+        const addBtn = trackDiv.querySelector('.add-to-playlist');
         
         if (currentPlaylistId) {
             const playlist = playlists.find(p => p.id === currentPlaylistId);
@@ -689,7 +643,10 @@ function updateAvailableTracksList() {
             addTrackToCurrentPlaylist(track);
         });
         
-        trackDiv.appendChild(addBtn);
+        trackDiv.addEventListener('click', () => {
+            playTrack(tracks.findIndex(t => t.url === track.url));
+        });
+        
         availableTracksList.appendChild(trackDiv);
     });
 }
@@ -710,47 +667,48 @@ function updatePlaylistTracksList() {
         trackDiv.className = 'playlist-track-item';
         
         // Мини-обложка
-        const miniCover = document.createElement('canvas');
-        miniCover.className = 'track-mini-cover';
-        miniCover.width = 30;
-        miniCover.height = 30;
-        
+        let miniCoverHtml = '';
         if (track.albumArt) {
-            const img = new Image();
-            img.crossOrigin = 'Anonymous';
-            img.onload = () => {
-                const miniCtx = miniCover.getContext('2d');
-                miniCtx.drawImage(img, 0, 0, 30, 30);
-            };
+            const img = document.createElement('img');
+            img.className = 'track-mini-cover';
             img.src = track.albumArt;
+            miniCoverHtml = img.outerHTML;
         } else {
-            const miniCtx = miniCover.getContext('2d');
+            const canvas = document.createElement('canvas');
+            canvas.className = 'track-mini-cover';
+            canvas.width = 30;
+            canvas.height = 30;
+            const miniCtx = canvas.getContext('2d');
             const gradient = miniCtx.createLinearGradient(0, 0, 30, 30);
             gradient.addColorStop(0, '#32007d');
             gradient.addColorStop(1, '#000000');
             miniCtx.fillStyle = gradient;
             miniCtx.fillRect(0, 0, 30, 30);
+            miniCoverHtml = canvas.outerHTML;
         }
         
-        trackDiv.appendChild(miniCover);
-        
-        const trackInfo = document.createElement('div');
-        trackInfo.className = 'track-info';
-        trackInfo.innerHTML = `
-            <span class="track-title">${track.title}</span>
-            <span class="track-artist">${track.artist || ''}</span>
+        trackDiv.innerHTML = `
+            ${miniCoverHtml}
+            <div class="track-info">
+                <span class="track-title">${track.title}</span>
+                <span class="track-artist">${track.artist || ''}</span>
+            </div>
+            <button class="remove-from-playlist">✕</button>
         `;
-        trackDiv.appendChild(trackInfo);
         
-        const removeBtn = document.createElement('button');
-        removeBtn.className = 'remove-from-playlist';
-        removeBtn.textContent = '✕';
+        const removeBtn = trackDiv.querySelector('.remove-from-playlist');
         removeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             removeTrackFromCurrentPlaylist(index);
         });
         
-        trackDiv.appendChild(removeBtn);
+        trackDiv.addEventListener('click', () => {
+            const trackIndex = tracks.findIndex(t => t.url === track.url);
+            if (trackIndex !== -1) {
+                playTrack(trackIndex);
+            }
+        });
+        
         playlistTracksList.appendChild(trackDiv);
     });
 }
@@ -1055,39 +1013,6 @@ shuffleBtn.addEventListener('click', () => {
     updateModeButtons();
 });
 
-// ========== ГРОМКОСТЬ ==========
-function initVolume() {
-    if (!volumeSlider || !volumePercent || !volumeIcon) return;
-    
-    const savedVolume = localStorage.getItem('volume');
-    let startVolume = 60;
-    
-    if (savedVolume !== null) {
-        startVolume = parseInt(savedVolume);
-    }
-    
-    audio.volume = startVolume / 100;
-    volumeSlider.value = startVolume;
-    volumePercent.textContent = startVolume + '%';
-    updateVolumeIcon(startVolume);
-    
-    volumeSlider.addEventListener('input', function(e) {
-        const volume = parseInt(e.target.value);
-        audio.volume = volume / 100;
-        volumePercent.textContent = volume + '%';
-        updateVolumeIcon(volume);
-        localStorage.setItem('volume', volume);
-    });
-}
-
-function updateVolumeIcon(volume) {
-    if (!volumeIcon) return;
-    if (volume == 0) volumeIcon.textContent = '🔇';
-    else if (volume < 30) volumeIcon.textContent = '🔈';
-    else if (volume < 70) volumeIcon.textContent = '🔉';
-    else volumeIcon.textContent = '🔊';
-}
-
 // ========== ЭКВАЛАЙЗЕР ==========
 let audioContext = null;
 let source = null;
@@ -1291,6 +1216,21 @@ function initEQSliders() {
     }
 }
 
+// ========== ЭКВАЛАЙЗЕР - УПРАВЛЕНИЕ ==========
+toggleEqBtn.addEventListener('click', () => {
+    eqControls.classList.toggle('hidden');
+});
+
+qSlider.addEventListener('input', (e) => {
+    updateQ(e.target.value);
+});
+
+applyMyPresetBtn.addEventListener('click', applyMyPreset);
+resetEqBtn.addEventListener('click', resetEQ);
+saveEqBtn.addEventListener('click', () => {
+    localStorage.setItem('eqSettings', JSON.stringify(eqSettings));
+});
+
 // ========== СОБЫТИЯ ПЛЕЕРА ==========
 playPauseBtn.addEventListener('click', togglePlay);
 prevBtn.addEventListener('click', playPrev);
@@ -1332,22 +1272,38 @@ audio.addEventListener('loadedmetadata', () => {
     }
 });
 
-// ========== ЭКВАЛАЙЗЕР - ОБРАБОТЧИКИ ==========
-qSlider.addEventListener('input', (e) => {
-    updateQ(e.target.value);
-});
+// ========== ГРОМКОСТЬ ==========
+function initVolume() {
+    if (!volumeSlider || !volumePercent || !volumeIcon) return;
+    
+    const savedVolume = localStorage.getItem('volume');
+    let startVolume = 60;
+    
+    if (savedVolume !== null) {
+        startVolume = parseInt(savedVolume);
+    }
+    
+    audio.volume = startVolume / 100;
+    volumeSlider.value = startVolume;
+    volumePercent.textContent = startVolume + '%';
+    updateVolumeIcon(startVolume);
+    
+    volumeSlider.addEventListener('input', function(e) {
+        const volume = parseInt(e.target.value);
+        audio.volume = volume / 100;
+        volumePercent.textContent = volume + '%';
+        updateVolumeIcon(volume);
+        localStorage.setItem('volume', volume);
+    });
+}
 
-toggleEqBtn.addEventListener('click', () => {
-    eqControls.classList.toggle('hidden');
-    toggleEqBtn.textContent = eqControls.classList.contains('hidden') ? 
-        'Показать эквалайзер' : 'Скрыть эквалайзер';
-});
-
-applyMyPresetBtn.addEventListener('click', applyMyPreset);
-resetEqBtn.addEventListener('click', resetEQ);
-saveEqBtn.addEventListener('click', () => {
-    localStorage.setItem('eqSettings', JSON.stringify(eqSettings));
-});
+function updateVolumeIcon(volume) {
+    if (!volumeIcon) return;
+    if (volume == 0) volumeIcon.textContent = '🔇';
+    else if (volume < 30) volumeIcon.textContent = '🔈';
+    else if (volume < 70) volumeIcon.textContent = '🔉';
+    else volumeIcon.textContent = '🔊';
+}
 
 // ========== ИНИЦИАЛИЗАЦИЯ ==========
 document.addEventListener('DOMContentLoaded', function() {
