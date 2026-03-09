@@ -211,34 +211,37 @@
             </div>
         </div>
 
-        <!-- Обложка текущего трека -->
-        <div class="album-art-container">
-            <canvas id="albumArt" class="album-art" width="300" height="300"></canvas>
-        </div>
-        
-        <!-- Информация о текущем треке под обложкой (слева) -->
-        <div class="current-track-info">
-            <div id="currentTrackTitle" class="current-track-title">Нет трека</div>
-            <div id="currentTrackArtist" class="current-track-artist"></div>
-        </div>
-        
-        <!-- Плеер -->
-        <div class="player-controls">
-            <div class="track-nav">
-                <button id="prevBtn" class="nav-btn" title="Предыдущий трек">⏮️</button>
-                <button id="playPauseBtn" class="play-btn">▶️</button>
-                <button id="nextBtn" class="nav-btn" title="Следующий трек">⏭️</button>
+        <!-- Главный блок плеера -->
+        <div class="player-main-block">
+            <!-- Обложка текущего трека -->
+            <div class="album-art-container">
+                <canvas id="albumArt" class="album-art" width="300" height="300"></canvas>
             </div>
             
-            <div class="extra-controls">
-                <button id="repeatBtn" class="control-btn" title="Режим повтора">🔁</button>
-                <button id="shuffleBtn" class="control-btn" title="Перемешать">🔀</button>
-                <button id="toggleEqBtn" class="control-btn eq-toggle-btn" title="Эквалайзер">🎚️</button>
+            <!-- Информация о текущем треке под обложкой -->
+            <div class="current-track-info">
+                <div id="currentTrackTitle" class="current-track-title">Нет трека</div>
+                <div id="currentTrackArtist" class="current-track-artist"></div>
             </div>
             
-            <input type="range" id="progressBar" value="0" max="100">
-            <span id="timeDisplay">0:00 / 0:00</span>
+            <!-- Ползунок прогресса и кнопка эквалайзера -->
+            <div class="progress-eq-row">
+                <input type="range" id="progressBar" class="progress-bar" value="0" max="100">
+                <button id="toggleEqBtn" class="eq-button" title="Эквалайзер">🎚️</button>
+            </div>
             
+            <span id="timeDisplay" class="time-display">0:00 / 0:00</span>
+            
+            <!-- Кнопки управления -->
+            <div class="control-buttons-row">
+                <button id="repeatBtn" class="control-btn-circle" title="Режим повтора">🔁</button>
+                <button id="prevBtn" class="nav-btn-circle" title="Предыдущий трек">⏮️</button>
+                <button id="playPauseBtn" class="play-btn-circle">▶️</button>
+                <button id="nextBtn" class="nav-btn-circle" title="Следующий трек">⏭️</button>
+                <button id="shuffleBtn" class="control-btn-circle" title="Перемешать">🔀</button>
+            </div>
+            
+            <!-- Регулятор громкости -->
             <div class="volume-control">
                 <span id="volumeIcon">🔊</span>
                 <input type="range" id="volumeSlider" min="0" max="100" value="60">
