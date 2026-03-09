@@ -78,6 +78,10 @@ const saveEqBtn = document.getElementById('saveEqBtn');
 // Аудио элемент
 const audio = new Audio();
 
+// ========== НАСТРОЙКИ АУДИО ==========
+audio.preload = 'auto';
+audio.crossOrigin = 'anonymous';
+
 // ========== ДАННЫЕ ==========
 let isPlaying = false;
 let currentTrackIndex = -1;
@@ -130,6 +134,35 @@ loadTracks();
 
 // ========== ИНИЦИАЛИЗАЦИЯ ==========
 updatePlaylistsGrid();
+
+// ========== ГЛОБАЛЬНЫЕ ОБРАБОТЧИКИ АУДИО ==========
+audio.addEventListener('loadstart', () => {
+    console.log('🎵 Начало загрузки аудио');
+});
+
+audio.addEventListener('progress', () => {
+    console.log('📥 Загрузка прогрессирует');
+});
+
+audio.addEventListener('suspend', () => {
+    console.log('⏸️ Загрузка приостановлена');
+});
+
+audio.addEventListener('abort', () => {
+    console.log('⛔ Загрузка прервана');
+});
+
+audio.addEventListener('stalled', () => {
+    console.log('⏸️ Загрузка заблокирована');
+});
+
+audio.addEventListener('waiting', () => {
+    console.log('⏳ Ожидание данных...');
+});
+
+audio.addEventListener('canplay', () => {
+    console.log('✅ Можно воспроизводить');
+});
 
 // ========== ФУНКЦИИ ДЛЯ РИСОВАНИЯ ==========
 function drawGradientAlbumArt(canvas) {
@@ -377,7 +410,6 @@ confirmUploadBtn.addEventListener('click', async () => {
             const result = await response.json();
             console.log('✅ Ответ от сервера:', result);
             
-            // Проверяем, что пришёл path
             if (!result.file || !result.file.path) {
                 console.error('❌ Сервер не вернул path!');
                 continue;
@@ -486,14 +518,13 @@ function updateTracklist() {
     });
 }
 
-// ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ ==========
+// ========== ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ ==========
 function playTrack(index) {
     if (index >= 0 && index < tracks.length) {
         audio.pause();
         
         currentTrackIndex = index;
         
-        // Проверяем наличие path
         if (!tracks[index].path) {
             console.error('❌ У трека нет path:', tracks[index]);
             return;
@@ -502,7 +533,6 @@ function playTrack(index) {
         const streamUrl = `${API_URL}/stream/${encodeURIComponent(tracks[index].path)}`;
         console.log('▶️ Воспроизведение через прокси:', streamUrl);
         
-        // Важно: очищаем предыдущий источник и загружаем новый
         audio.src = '';
         audio.load();
         audio.src = streamUrl;
@@ -520,30 +550,12 @@ function playTrack(index) {
             if (playPauseBtn) playPauseBtn.textContent = '▶️';
         };
         
-        // Добавляем обработчики для отслеживания состояния
-        audio.onstalled = function() {
-            console.log('⏸️ Загрузка приостановлена');
-        };
-        
-        audio.onwaiting = function() {
-            console.log('⏳ Буферизация...');
-        };
-        
-        audio.oncanplay = function() {
-            console.log('✅ Можно воспроизводить');
-        };
-        
         audio.onplaying = function() {
             console.log('▶️ Воспроизведение началось');
             isPlaying = true;
             if (playPauseBtn) playPauseBtn.textContent = '⏸️';
         };
         
-        audio.ontimeout = function() {
-            console.log('⏰ Таймаут загрузки');
-        };
-        
-        // Добавляем небольшую задержку перед воспроизведением для буферизации
         setTimeout(() => {
             audio.play().then(() => {
                 console.log('✅ Воспроизведение успешно');
@@ -561,9 +573,10 @@ function playTrack(index) {
                 isPlaying = false;
                 if (playPauseBtn) playPauseBtn.textContent = '▶️';
             });
-        }, 300); // Даём время на буферизацию
+        }, 300);
     }
 }
+
 // ========== МЕНЮ ТРЕКА ==========
 function openTrackMenu(trackIndex) {
     currentTrackForMenu = trackIndex;
