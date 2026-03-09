@@ -112,8 +112,10 @@ function loadTracks() {
         if (saved) {
             tracks = JSON.parse(saved);
             console.log('✅ Загружено треков из localStorage:', tracks.length);
+            console.log('✅ Треки:', tracks);
         } else {
             tracks = [];
+            console.log('ℹ️ Нет сохранённых треков');
         }
     } catch (e) {
         console.error('❌ Ошибка загрузки треков:', e);
@@ -373,6 +375,13 @@ confirmUploadBtn.addEventListener('click', async () => {
             }
             
             const result = await response.json();
+            console.log('✅ Ответ от сервера:', result);
+            
+            // Проверяем, что пришёл path
+            if (!result.file || !result.file.path) {
+                console.error('❌ Сервер не вернул path!');
+                continue;
+            }
             
             newTracks.push({
                 path: result.file.path,
@@ -393,6 +402,9 @@ confirmUploadBtn.addEventListener('click', async () => {
     updateTracklist();
     uploadModal.classList.add('hidden');
     hideLoading();
+    
+    console.log('✅ Загружено треков:', uploadedCount);
+    console.log('✅ Текущие треки:', tracks);
 });
 
 // ========== ТРЕКЛИСТ ==========
@@ -480,6 +492,13 @@ function playTrack(index) {
         audio.pause();
         
         currentTrackIndex = index;
+        
+        // Проверяем наличие path
+        if (!tracks[index].path) {
+            console.error('❌ У трека нет path:', tracks[index]);
+            return;
+        }
+        
         const streamUrl = `${API_URL}/stream/${encodeURIComponent(tracks[index].path)}`;
         console.log('▶️ Воспроизведение через прокси:', streamUrl);
         audio.src = streamUrl;
@@ -617,7 +636,7 @@ function addTrackToPlaylist(playlistId) {
     
     const track = tracks[currentTrackForMenu];
     
-    if (!playlist.tracks.some(t => t.url === track.url)) {
+    if (!playlist.tracks.some(t => t.path === track.path)) {
         playlist.tracks.push({...track});
         localStorage.setItem('playlists', JSON.stringify(playlists));
         updatePlaylistsGrid();
@@ -643,7 +662,7 @@ deleteTrackBtn.addEventListener('click', async () => {
     }
     
     playlists.forEach(playlist => {
-        playlist.tracks = playlist.tracks.filter(t => t.url !== trackToDelete.url);
+        playlist.tracks = playlist.tracks.filter(t => t.path !== trackToDelete.path);
     });
     localStorage.setItem('playlists', JSON.stringify(playlists));
     
@@ -831,7 +850,7 @@ function updateAvailableTracksList() {
         if (currentPlaylistId) {
             const playlist = playlists.find(p => p.id === currentPlaylistId);
             if (playlist) {
-                const isInPlaylist = playlist.tracks.some(t => t.url === track.url);
+                const isInPlaylist = playlist.tracks.some(t => t.path === track.path);
                 if (isInPlaylist) {
                     addBtn.style.display = 'none';
                 }
@@ -844,7 +863,7 @@ function updateAvailableTracksList() {
         });
         
         trackDiv.addEventListener('click', () => {
-            const trackIndex = tracks.findIndex(t => t.url === track.url);
+            const trackIndex = tracks.findIndex(t => t.path === track.path);
             if (trackIndex !== -1) {
                 playTrack(trackIndex);
             }
@@ -918,7 +937,7 @@ function updatePlaylistTracksList() {
         });
         
         trackDiv.addEventListener('click', () => {
-            const trackIndex = tracks.findIndex(t => t.url === track.url);
+            const trackIndex = tracks.findIndex(t => t.path === track.path);
             if (trackIndex !== -1) {
                 playTrack(trackIndex);
             }
@@ -934,7 +953,7 @@ function addTrackToCurrentPlaylist(track) {
     const playlist = playlists.find(p => p.id === currentPlaylistId);
     if (!playlist) return;
     
-    if (!playlist.tracks.some(t => t.url === track.url)) {
+    if (!playlist.tracks.some(t => t.path === track.path)) {
         playlist.tracks.push({...track});
         localStorage.setItem('playlists', JSON.stringify(playlists));
         updateAvailableTracksList();
