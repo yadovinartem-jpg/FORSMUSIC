@@ -2,333 +2,217 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
-const { google } = require('googleapis');
+const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegStatic = require('ffmpeg-static');
 const { v4: uuidv4 } = require('uuid');
 
-// Настройка ffmpeg
 ffmpeg.setFfmpegPath(ffmpegStatic);
+console.log('✅ FFmpeg initialized');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware с правильной настройкой CORS
+// ========== CORS ==========
+const allowedOrigins = [
+  'https://yadovinartem-jpg.github.io',
+  'http://localhost:5500',
+  'http://127.0.0.1:5500'
+];
+
 app.use(cors({
-  origin: ['https://yadovinartem-jpg.github.io', 'http://localhost:5500', 'http://127.0.0.1:5500'],
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      return callback(new Error('CORS not allowed'), false);
+    }
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Добавляем middleware для обработки preflight запросов
 app.options('*', cors());
-
-// Явно добавляем заголовки для всех ответов
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  next();
-});
 app.use(express.json());
 
-// Настройка multer для временного хранения в памяти
+// ========== MULTER ==========
 const upload = multer({ 
   storage: multer.memoryStorage(),
-  limits: { fileSize: 100 * 1024 * 1024 } // 100MB лимит
+  limits: { fileSize: 100 * 1024 * 1024 }
 });
 
-// ========== GOOGLE DRIVE НАСТРОЙКА ==========
-let drive;
+// ========== ЯНДЕКС.ДИСК С ВАШИМ ТОКЕНОМ ==========
+const YANDEX_TOKEN = process.env.YANDEX_TOKEN;
+const YANDEX_API_URL = 'https://cloud-api.yandex.net/v1/disk';
 
-async function initializeGoogleDrive() {
-  try {
-    const auth = new google.auth.GoogleAuth({
-      keyFile: path.join(__dirname, 'credentials.json'),
-      scopes: ['https://www.googleapis.com/auth/drive.file'],
-    });
-
-    const authClient = await auth.getClient();
-    drive = google.drive({ version: 'v3', auth: authClient });
-    console.log('✅ Google Drive инициализирован');
-  } catch (error) {
-    console.error('❌ Ошибка инициализации Google Drive:', error.message);
-    console.log('Убедитесь, что файл credentials.json находится в папке backend/');
-    process.exit(1);
+const yandexApi = axios.create({
+  baseURL: YANDEX_API_URL,
+  headers: {
+    'Authorization': `OAuth ${YANDEX_TOKEN}`
   }
+});
+
+// ========== ФУНКЦИИ ==========
+async function getUploadLink(remotePath) {
+  const response = await yandexApi.get('/resources/upload', {
+    params: { path: remotePath, overwrite: true }
+  });
+  return response.data.href;
 }
 
-// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
-/**
- * Сжатие аудио в формат Opus (отличное качество при малом размере)
- */
-function compressAudio(inputBuffer, inputFormat, outputFormat = 'opus') {
+async function uploadFile(uploadUrl, fileBuffer) {
+  await axios.put(uploadUrl, fileBuffer, {
+    headers: { 'Content-Type': 'audio/opus' }
+  });
+  console.log('✅ Файл загружен на Яндекс.Диск');
+}
+
+async function publishFile(remotePath) {
+  await yandexApi.put('/resources/publish', null, {
+    params: { path: remotePath }
+  });
+  console.log('✅ Файл опубликован');
+}
+
+async function getFileInfo(remotePath) {
+  const response = await yandexApi.get('/resources', {
+    params: { path: remotePath }
+  });
+  return response.data;
+}
+
+async function deleteFile(remotePath) {
+  await yandexApi.delete('/resources', {
+    params: { path: remotePath, permanently: true }
+  });
+  console.log('✅ Файл удалён с Яндекс.Диска');
+}
+
+function convertToDirectLink(publicUrl) {
+  return `https://getfile.dokpub.com/yandex/get/${publicUrl}`;
+}
+
+async function uploadToYandex(fileBuffer, fileName) {
+  console.log('☁️ Загрузка на Яндекс.Диск...');
+  
+  const remotePath = `/forsity-music/${uuidv4()}-${fileName}`;
+  
+  const uploadUrl = await getUploadLink(remotePath);
+  await uploadFile(uploadUrl, fileBuffer);
+  await publishFile(remotePath);
+  const fileInfo = await getFileInfo(remotePath);
+  const directUrl = convertToDirectLink(fileInfo.public_url);
+  
+  return {
+    path: remotePath,
+    publicUrl: fileInfo.public_url,
+    directUrl: directUrl,
+    name: fileInfo.name,
+    size: fileInfo.size
+  };
+}
+
+function compressAudio(inputBuffer, inputFormat) {
   return new Promise((resolve, reject) => {
-    const inputPath = path.join(__dirname, 'temp', `${uuidv4()}.${inputFormat}`);
-    const outputPath = path.join(__dirname, 'temp', `${uuidv4()}.${outputFormat}`);
+    console.log('🔄 Сжатие аудио...');
     
-    // Создаем временную папку, если её нет
-    if (!fs.existsSync(path.join(__dirname, 'temp'))) {
-      fs.mkdirSync(path.join(__dirname, 'temp'));
+    const tempDir = path.join(__dirname, 'temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
     }
     
-    // Сохраняем входной буфер во временный файл
+    const inputPath = path.join(tempDir, `${uuidv4()}.${inputFormat}`);
+    const outputPath = path.join(tempDir, `${uuidv4()}.opus`);
+    
     fs.writeFileSync(inputPath, inputBuffer);
     
-    // Настройки сжатия в зависимости от формата
-    let command = ffmpeg(inputPath);
-    
-    switch(outputFormat) {
-      case 'opus':
-        // Opus - лучший выбор для стриминга, отличное качество при низком битрейте
-        command.audioCodec('libopus')
-               .audioBitrate(128) // 128 kbps - отличное качество
-               .audioChannels(2)
-               .audioFrequency(48000);
-        break;
-      case 'mp3':
-        // MP3 - для совместимости
-        command.audioCodec('libmp3lame')
-               .audioBitrate(192) // 192 kbps - хорошее качество
-               .audioChannels(2);
-        break;
-      case 'aac':
-        // AAC - хороший выбор для Apple устройств
-        command.audioCodec('aac')
-               .audioBitrate(128)
-               .audioChannels(2);
-        break;
-      default:
-        command.audioCodec('libopus')
-               .audioBitrate(128);
-    }
-    
-    command.output(outputPath)
-           .on('end', () => {
-             // Читаем сжатый файл
-             const compressedBuffer = fs.readFileSync(outputPath);
-             
-             // Очищаем временные файлы
-             fs.unlinkSync(inputPath);
-             fs.unlinkSync(outputPath);
-             
-             resolve(compressedBuffer);
-           })
-           .on('error', (err) => {
-             // Очищаем временные файлы при ошибке
-             if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-             if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-             reject(err);
-           })
-           .run();
+    ffmpeg(inputPath)
+      .audioCodec('libopus')
+      .audioBitrate(128)
+      .audioChannels(2)
+      .audioFrequency(48000)
+      .output(outputPath)
+      .on('end', () => {
+        const compressedBuffer = fs.readFileSync(outputPath);
+        fs.unlinkSync(inputPath);
+        fs.unlinkSync(outputPath);
+        resolve(compressedBuffer);
+      })
+      .on('error', (err) => {
+        if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+        if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+        reject(err);
+      })
+      .run();
   });
 }
 
-/**
- * Загрузка файла в Google Drive
- */
-async function uploadToDrive(fileBuffer, fileName, mimeType) {
-  try {
-    // Определяем MIME тип
-    const fileMimeType = mimeType || 'audio/opus';
-    
-    // Создаем файл в Google Drive
-    const response = await drive.files.create({
-      requestBody: {
-        name: fileName,
-        mimeType: fileMimeType,
-        parents: [process.env.DRIVE_FOLDER_ID],
-        properties: {
-          uploaded: new Date().toISOString(),
-          source: 'Forsity Music'
-        }
-      },
-      media: {
-        mimeType: fileMimeType,
-        body: require('stream').Readable.from(fileBuffer)
-      },
-      fields: 'id, name, mimeType, size, webViewLink'
-    });
-
-    // Делаем файл публичным (для доступа по ссылке)
-    await drive.permissions.create({
-      fileId: response.data.id,
-      requestBody: {
-        role: 'reader',
-        type: 'anyone'
-      }
-    });
-
-    return {
-      id: response.data.id,
-      name: response.data.name,
-      mimeType: response.data.mimeType,
-      size: response.data.size,
-      webViewLink: response.data.webViewLink,
-      // Прямая ссылка для скачивания/стриминга
-      directLink: `https://drive.google.com/uc?export=download&id=${response.data.id}`
-    };
-  } catch (error) {
-    console.error('Ошибка загрузки в Google Drive:', error);
-    throw error;
-  }
-}
-
 // ========== ЭНДПОЙНТЫ ==========
-
-/**
- * Загрузка трека
- */
 app.post('/api/upload', upload.single('audio'), async (req, res) => {
+  console.log('📥 Получен запрос на загрузку');
+  
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'Файл не предоставлен' });
+      return res.status(400).json({ error: 'No file provided' });
     }
 
     const { title, artist } = req.body;
-    const originalFile = req.file;
-    
-    console.log(`📁 Загрузка: ${originalFile.originalname}`);
-    
-    // Определяем формат входного файла
-    const inputFormat = originalFile.originalname.split('.').pop().toLowerCase();
-    
-    // Сжимаем в Opus (лучший выбор для стриминга)
-    console.log('🔄 Сжатие аудио...');
-    const compressedBuffer = await compressAudio(
-      originalFile.buffer, 
-      inputFormat, 
-      'opus'
-    );
-    
-    // Генерируем имя файла
+    const inputFormat = req.file.originalname.split('.').pop().toLowerCase();
+
+    const compressedBuffer = await compressAudio(req.file.buffer, inputFormat);
+
     const fileName = `${title || 'untitled'} - ${artist || 'unknown'}.opus`
-      .replace(/[^a-zA-Z0-9\s\-_.]/g, '') // Удаляем недопустимые символы
+      .replace(/[^a-zA-Z0-9\s\-_.]/g, '')
       .substring(0, 100);
-    
-    // Загружаем в Google Drive
-    console.log('☁️ Загрузка в Google Drive...');
-    const driveFile = await uploadToDrive(
-      compressedBuffer,
-      fileName,
-      'audio/opus'
-    );
-    
-    // Возвращаем результат
+
+    const yandexFile = await uploadToYandex(compressedBuffer, fileName);
+
     res.json({
       success: true,
       file: {
-        url: driveFile.directLink,
-        driveId: driveFile.id,
-        title: title || originalFile.originalname,
+        url: yandexFile.directUrl,
+        path: yandexFile.path,
+        title: title || req.file.originalname,
         artist: artist || 'Unknown',
-        format: 'opus',
-        bitrate: '128k',
-        size: driveFile.size
+        format: 'opus'
       }
     });
     
-    console.log(`✅ Загружено: ${fileName}`);
+    console.log('✅ Загрузка завершена');
     
   } catch (error) {
     console.error('❌ Ошибка загрузки:', error);
     res.status(500).json({ 
-      error: 'Ошибка при загрузке файла',
+      error: 'Upload failed',
       details: error.message 
     });
   }
 });
 
-/**
- * Получение информации о треке по Drive ID
- */
-app.get('/api/track/:fileId', async (req, res) => {
+app.delete('/api/track/:path(*)', async (req, res) => {
   try {
-    const { fileId } = req.params;
-    
-    const response = await drive.files.get({
-      fileId: fileId,
-      fields: 'id, name, mimeType, size, createdTime, properties'
-    });
-    
-    res.json({
-      id: response.data.id,
-      name: response.data.name,
-      mimeType: response.data.mimeType,
-      size: response.data.size,
-      created: response.data.createdTime,
-      properties: response.data.properties,
-      url: `https://drive.google.com/uc?export=download&id=${response.data.id}`
-    });
-    
+    const remotePath = decodeURIComponent(req.params.path);
+    await deleteFile(remotePath);
+    res.json({ success: true });
   } catch (error) {
-    console.error('Ошибка получения информации о треке:', error);
-    res.status(500).json({ error: 'Файл не найден' });
+    console.error('❌ Ошибка удаления:', error);
+    res.status(500).json({ error: 'Delete failed' });
   }
 });
 
-/**
- * Удаление трека из Google Drive
- */
-app.delete('/api/track/:fileId', async (req, res) => {
-  try {
-    const { fileId } = req.params;
-    
-    await drive.files.delete({
-      fileId: fileId
-    });
-    
-    res.json({ success: true, message: 'Файл удален' });
-    
-  } catch (error) {
-    console.error('Ошибка удаления файла:', error);
-    res.status(500).json({ error: 'Ошибка при удалении файла' });
-  }
-});
-
-/**
- * Получение списка всех треков (опционально)
- */
-app.get('/api/tracks', async (req, res) => {
-  try {
-    const response = await drive.files.list({
-      q: `'${process.env.DRIVE_FOLDER_ID}' in parents and mimeType contains 'audio/'`,
-      fields: 'files(id, name, mimeType, size, createdTime, properties)',
-      orderBy: 'createdTime desc'
-    });
-    
-    const tracks = response.data.files.map(file => ({
-      id: file.id,
-      name: file.name,
-      mimeType: file.mimeType,
-      size: file.size,
-      created: file.createdTime,
-      title: file.properties?.title || file.name,
-      artist: file.properties?.artist || 'Unknown',
-      url: `https://drive.google.com/uc?export=download&id=${file.id}`
-    }));
-    
-    res.json({ tracks });
-    
-  } catch (error) {
-    console.error('Ошибка получения списка треков:', error);
-    res.status(500).json({ error: 'Ошибка при получении списка треков' });
-  }
-});
-
-// ========== ЗАПУСК СЕРВЕРА ==========
-initializeGoogleDrive().then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 Сервер запущен на порту ${PORT}`);
-    console.log(`📁 Папка Google Drive ID: ${process.env.DRIVE_FOLDER_ID}`);
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    storage: 'yandex-disk',
+    token: YANDEX_TOKEN ? 'configured' : 'missing'
   });
 });
 
-// Обработка необработанных ошибок
-process.on('unhandledRejection', (error) => {
-  console.error('Необработанная ошибка:', error);
+// ========== ЗАПУСК ==========
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Сервер запущен на порту ${PORT}`);
+  console.log(`🌍 Public URL: https://${process.env.CODESPACE_NAME}-${PORT}.app.github.dev`);
 });
