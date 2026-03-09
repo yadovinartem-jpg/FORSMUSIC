@@ -55,6 +55,42 @@ body {
     transform: scale(1.05);
 }
 
+/* Обложка текущего трека */
+.album-art-container {
+    width: 100%;
+    margin-bottom: 15px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(50, 0, 125, 0.3);
+}
+
+.album-art {
+    width: 100%;
+    aspect-ratio: 1/1;
+    display: block;
+    background: linear-gradient(135deg, #32007d, #000000);
+}
+
+/* Информация о текущем треке под обложкой */
+.current-track-info {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 0 10px;
+}
+
+.current-track-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #000000;
+    margin-bottom: 5px;
+    line-height: 1.3;
+}
+
+.current-track-artist {
+    font-size: 16px;
+    color: #666666;
+}
+
 /* Модальное окно загрузки */
 .upload-modal {
     max-width: 450px;
@@ -404,6 +440,29 @@ body {
 .track-menu-list {
     max-height: 300px;
     overflow-y: auto;
+    margin-bottom: 15px;
+}
+
+.track-menu-delete {
+    border-top: 1px solid #333;
+    padding-top: 15px;
+}
+
+.delete-track-btn {
+    width: 100%;
+    background: #f44336;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.delete-track-btn:hover {
+    background: #d32f2f;
+    transform: scale(1.02);
 }
 
 .playlist-menu-item {
@@ -534,46 +593,7 @@ body {
     background: rgba(255,255,255,0.2);
 }
 
-/* Остальные стили */
-.album-art-container {
-    position: relative;
-    width: 100%;
-    margin-bottom: 20px;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(50, 0, 125, 0.3);
-}
-
-.album-art {
-    width: 100%;
-    aspect-ratio: 1/1;
-    display: block;
-    background: linear-gradient(135deg, #32007d, #000000);
-}
-
-.track-info-header {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(transparent, rgba(0,0,0,0.8));
-    color: white;
-    padding: 20px 15px 15px;
-}
-
-#currentTrackTitle {
-    display: block;
-    font-size: 18px;
-    font-weight: bold;
-    margin-bottom: 4px;
-}
-
-#currentTrackArtist {
-    display: block;
-    font-size: 14px;
-    opacity: 0.9;
-}
-
+/* Плеер */
 .player-controls {
     background: var(--tg-theme-secondary-bg-color, #fff);
     padding: 20px;
