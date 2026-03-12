@@ -7,6 +7,34 @@
     <link rel="stylesheet" href="style.css">
     <!-- Подключаем SDK Telegram -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#32007d">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FORSITY MUSIC">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="icons/maskable_icon_x192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/maskable_icon_x128.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/maskable_icon_x192.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="icons/maskable_icon_x128.png">
+    
+    <!-- Microsoft Tiles -->
+    <meta name="msapplication-TileColor" content="#32007d">
+    <meta name="msapplication-TileImage" content="icons/maskable_icon_x144.png">
+    
+    <!-- Регистрация Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('✅ Service Worker зарегистрирован:', reg.scope))
+                    .catch(err => console.error('❌ Ошибка регистрации Service Worker:', err));
+            });
+        }
+    </script>
 </head>
 <body>
     <div class="app">
