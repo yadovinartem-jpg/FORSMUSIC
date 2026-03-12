@@ -9,11 +9,12 @@ const ffmpeg = require('fluent-ffmpeg');
 const ffmpegStatic = require('ffmpeg-static');
 const { v4: uuidv4 } = require('uuid');
 
+// Настройка ffmpeg
 ffmpeg.setFfmpegPath(ffmpegStatic);
 console.log('✅ FFmpeg initialized');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; // Render даёт свой PORT
 
 // ========== CORS ==========
 const allowedOrigins = [
@@ -45,7 +46,7 @@ const upload = multer({
 });
 
 // ========== ЯНДЕКС.ДИСК ==========
-const YANDEX_TOKEN = process.env.YANDEX_TOKEN || 'y0__xCrtM7NAxj43T4g9LzY2BYwoZPOsQiuLwg5fhdGB1hQpqVllWS2bhOkWw';
+const YANDEX_TOKEN = process.env.YANDEX_TOKEN; // Будет в переменных окружения Render
 const YANDEX_API_URL = 'https://cloud-api.yandex.net/v1/disk';
 
 const yandexApi = axios.create({
@@ -57,8 +58,7 @@ const yandexApi = axios.create({
 
 console.log('✅ Яндекс.Диск инициализирован');
 
-// ========== ФУНКЦИИ ДЛЯ РАБОТЫ С ЯНДЕКС.ДИСКОМ ==========
-
+// ========== ФУНКЦИИ ==========
 async function getUploadLink(remotePath) {
   const response = await yandexApi.get('/resources/upload', {
     params: { path: remotePath, overwrite: true }
@@ -155,7 +155,6 @@ function compressAudio(inputBuffer, inputFormat) {
 }
 
 // ========== ЭНДПОЙНТЫ ==========
-
 app.post('/api/upload', upload.single('audio'), async (req, res) => {
   console.log('📥 Получен запрос на загрузку');
   
@@ -196,57 +195,52 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   }
 });
 
-// ========== ИСПРАВЛЕННЫЙ ЭНДПОЙНТ ДЛЯ СТРИМИНГА ==========
+// ========== СТРИМИНГ ==========
 app.get('/api/stream/:path(*)', async (req, res) => {
   try {
     const remotePath = decodeURIComponent(req.params.path);
     console.log('🎵 Стриминг файла:', remotePath);
     
-    // Получаем временную ссылку на скачивание
     const downloadUrl = await getDownloadLink(remotePath);
+    const fileInfo = await getFileInfo(remotePath);
     
-    // Устанавливаем правильные заголовки для стриминга
-    res.setHeader('Content-Type', 'audio/opus');
+    let mimeType = fileInfo.mime_type || 'audio/ogg';
+    console.log('🎵 MIME-тип из Яндекса:', mimeType);
+    
+    res.setHeader('Content-Type', mimeType);
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     res.setHeader('Connection', 'keep-alive');
-    
-    // Добавляем заголовки для поддержки докачки
     res.setHeader('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     
-    // Создаём запрос с поддержкой частичной загрузки
     const response = await axios({
       method: 'get',
       url: downloadUrl,
       responseType: 'stream',
-      timeout: 30000, // 30 секунд таймаут
+      timeout: 30000,
       headers: {
         'User-Agent': 'ForsityMusic/1.0'
       }
     });
     
-    // Проверяем, есть ли заголовок с размером файла
     if (response.headers['content-length']) {
       res.setHeader('Content-Length', response.headers['content-length']);
     }
     
-    // Передаём поток клиенту
+    if (response.headers['content-range']) {
+      res.setHeader('Content-Range', response.headers['content-range']);
+    }
+    
     response.data.pipe(res);
     
-    // Обработка ошибок потока
     response.data.on('error', (err) => {
       console.error('❌ Ошибка потока:', err);
       if (!res.headersSent) {
         res.status(500).json({ error: 'Stream error' });
       }
-    });
-    
-    // Логируем успешное начало стриминга
-    response.data.on('data', (chunk) => {
-      console.log(`📦 Отправлено ${chunk.length} байт`);
     });
     
   } catch (error) {
@@ -257,6 +251,7 @@ app.get('/api/stream/:path(*)', async (req, res) => {
   }
 });
 
+// ========== УДАЛЕНИЕ ==========
 app.delete('/api/track/:path(*)', async (req, res) => {
   try {
     const remotePath = decodeURIComponent(req.params.path);
@@ -268,16 +263,16 @@ app.delete('/api/track/:path(*)', async (req, res) => {
   }
 });
 
+// ========== HEALTH CHECK (ДЛЯ ПИНГА) ==========
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     storage: 'yandex-disk',
-    token: YANDEX_TOKEN ? 'configured' : 'missing'
+    timestamp: new Date().toISOString()
   });
 });
 
 // ========== ЗАПУСК ==========
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Сервер запущен на порту ${PORT}`);
-  console.log(`🌍 Public URL: https://${process.env.CODESPACE_NAME}-${PORT}.app.github.dev`);
 });
