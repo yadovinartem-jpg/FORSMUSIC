@@ -94,6 +94,75 @@ let repeatMode = 0;
 let shuffleMode = false;
 let shuffledIndices = [];
 
+// ========== MEDIA SESSION API ==========
+function setupMediaSession(track) {
+    if (!('mediaSession' in navigator)) return;
+    
+    console.log('🎵 Настройка Media Session для трека:', track.title);
+    
+    // Метаданные для уведомления
+    navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.title || 'Без названия',
+        artist: track.artist || 'Неизвестный исполнитель',
+        album: 'Моя коллекция',
+        artwork: track.albumArt ? [
+            { src: track.albumArt, sizes: '96x96', type: 'image/jpeg' },
+            { src: track.albumArt, sizes: '128x128', type: 'image/jpeg' },
+            { src: track.albumArt, sizes: '192x192', type: 'image/jpeg' },
+            { src: track.albumArt, sizes: '256x256', type: 'image/jpeg' },
+            { src: track.albumArt, sizes: '384x384', type: 'image/jpeg' },
+            { src: track.albumArt, sizes: '512x512', type: 'image/jpeg' }
+        ] : [
+            { src: 'icons/maskable_icon_x192.png', sizes: '192x192', type: 'image/png' },
+            { src: 'icons/maskable_icon_x512.png', sizes: '512x512', type: 'image/png' }
+        ]
+    });
+    
+    // Устанавливаем обработчики кнопок (только один раз)
+    if (!navigator.mediaSession._handlersSet) {
+        navigator.mediaSession.setActionHandler('play', () => {
+            audio.play();
+            navigator.mediaSession.playbackState = 'playing';
+        });
+        
+        navigator.mediaSession.setActionHandler('pause', () => {
+            audio.pause();
+            navigator.mediaSession.playbackState = 'paused';
+        });
+        
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+            if (typeof playPrev === 'function') playPrev();
+        });
+        
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+            if (typeof playNext === 'function') playNext();
+        });
+        
+        navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+            const skipTime = details.seekOffset || 10;
+            audio.currentTime = Math.max(audio.currentTime - skipTime, 0);
+        });
+        
+        navigator.mediaSession.setActionHandler('seekforward', (details) => {
+            const skipTime = details.seekOffset || 10;
+            audio.currentTime = Math.min(audio.currentTime + skipTime, audio.duration);
+        });
+        
+        navigator.mediaSession._handlersSet = true;
+    }
+    
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    
+    // Обновляем позицию
+    if (audio.duration) {
+        navigator.mediaSession.setPositionState({
+            duration: audio.duration,
+            playbackRate: audio.playbackRate,
+            position: audio.currentTime
+        });
+    }
+}
+
 // ========== СОХРАНЕНИЕ И ЗАГРУЗКА ТРЕКОВ ==========
 function saveTracks() {
     try {
@@ -116,7 +185,6 @@ function loadTracks() {
         if (saved) {
             tracks = JSON.parse(saved);
             console.log('✅ Загружено треков из localStorage:', tracks.length);
-            console.log('✅ Треки:', tracks);
         } else {
             tracks = [];
             console.log('ℹ️ Нет сохранённых треков');
@@ -407,7 +475,6 @@ confirmUploadBtn.addEventListener('click', async () => {
     hideLoading();
     
     console.log('✅ Загружено треков:', uploadedCount);
-    console.log('✅ Текущие треки:', tracks);
 });
 
 // ========== ТРЕКЛИСТ ==========
@@ -489,7 +556,7 @@ function updateTracklist() {
     });
 }
 
-// ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ ==========
+// ========== ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ ==========
 function playTrack(index) {
     if (index >= 0 && index < tracks.length) {
         audio.pause();
@@ -516,7 +583,7 @@ function playTrack(index) {
         // Создаем новый source элемент
         const source = document.createElement('source');
         source.src = streamUrl;
-        source.type = 'audio/ogg'; // Пробуем OGG как основной
+        source.type = 'audio/ogg';
         audio.appendChild(source);
         
         // Добавляем еще один source на случай, если OGG не подойдет
@@ -537,22 +604,10 @@ function playTrack(index) {
             shuffledIndices = shuffledIndices.filter(i => i !== index);
         }
         
-        // Обработчики событий
         audio.onerror = function(e) {
             console.error('❌ Audio error:', e);
             console.error('❌ Audio error code:', audio.error ? audio.error.code : 'unknown');
             console.error('❌ Audio error message:', audio.error ? audio.error.message : 'unknown');
-            
-            // Пробуем еще раз с явным указанием типа
-            console.log('🔄 Пробуем воспроизвести снова...');
-            audio.load();
-            setTimeout(() => {
-                audio.play().catch(err => {
-                    console.error('❌ Финальная ошибка:', err);
-                    isPlaying = false;
-                    if (playPauseBtn) playPauseBtn.textContent = '▶️';
-                });
-            }, 500);
         };
         
         audio.oncanplay = function() {
@@ -560,9 +615,12 @@ function playTrack(index) {
             audio.play().then(() => {
                 console.log('✅ Воспроизведение успешно');
                 isPlaying = true;
-                if (playPauseBtn) playPauseBtn.textContent = '⏸️';
+                playPauseBtn.textContent = '⏸️';
                 updateTracklist();
                 updateAlbumArt(tracks[currentTrackIndex]);
+                
+                // Вызываем Media Session API
+                setupMediaSession(tracks[currentTrackIndex]);
                 
                 if (!isEQInitialized) {
                     setTimeout(() => {
@@ -573,14 +631,19 @@ function playTrack(index) {
             }).catch(error => {
                 console.error('❌ Play error:', error);
                 isPlaying = false;
-                if (playPauseBtn) playPauseBtn.textContent = '▶️';
+                playPauseBtn.textContent = '▶️';
             });
         };
         
         audio.onplaying = function() {
             console.log('▶️ Воспроизведение началось');
             isPlaying = true;
-            if (playPauseBtn) playPauseBtn.textContent = '⏸️';
+            playPauseBtn.textContent = '⏸️';
+            navigator.mediaSession.playbackState = 'playing';
+        };
+        
+        audio.onpause = function() {
+            navigator.mediaSession.playbackState = 'paused';
         };
         
         // Таймаут на случай, если oncanplay не сработает
@@ -1188,14 +1251,14 @@ function togglePlay() {
     
     if (isPlaying) {
         audio.pause();
-        if (playPauseBtn) playPauseBtn.textContent = '▶️';
+        playPauseBtn.textContent = '▶️';
         isPlaying = false;
     } else {
         if (currentTrackIndex === -1) {
             playTrack(0);
         } else {
             audio.play().then(() => {
-                if (playPauseBtn) playPauseBtn.textContent = '⏸️';
+                playPauseBtn.textContent = '⏸️';
                 isPlaying = true;
             }).catch(error => {
                 console.error('❌ Play error:', error);
@@ -1497,6 +1560,15 @@ audio.addEventListener('timeupdate', () => {
         progressBar.value = progress;
         timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
     }
+    
+    // Обновляем позицию в Media Session
+    if ('mediaSession' in navigator && audio.duration) {
+        navigator.mediaSession.setPositionState({
+            duration: audio.duration,
+            playbackRate: audio.playbackRate,
+            position: audio.currentTime
+        });
+    }
 });
 
 audio.addEventListener('ended', () => {
@@ -1506,10 +1578,10 @@ audio.addEventListener('ended', () => {
         playTrack(nextIndex);
     } else {
         isPlaying = false;
-        if (playPauseBtn) playPauseBtn.textContent = '▶️';
+        playPauseBtn.textContent = '▶️';
         currentTrackIndex = -1;
-        if (progressBar) progressBar.value = 0;
-        if (timeDisplay) timeDisplay.textContent = '0:00 / 0:00';
+        progressBar.value = 0;
+        timeDisplay.textContent = '0:00 / 0:00';
         updateTracklist();
         updateAlbumArt(null);
     }
