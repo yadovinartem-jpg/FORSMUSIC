@@ -2,8 +2,8 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// Адрес бэкенд-сервера (ваш Render URL)
-const API_URL = 'https://forsity-music-backend.onrender.com/api';
+// Адрес бэкенд-сервера (ваш URL)
+const API_URL = 'https://stunning-enigma-7vj6wv7x996vhx5px-3000.app.github.dev/api';
 
 // ========== ЭЛЕМЕНТЫ ==========
 // Шапка
