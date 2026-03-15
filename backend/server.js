@@ -14,7 +14,7 @@ ffmpeg.setFfmpegPath(ffmpegStatic);
 console.log('✅ FFmpeg initialized');
 
 const app = express();
-const PORT = process.env.PORT || 3000; // Render даёт свой PORT
+const PORT = process.env.PORT || 3000;
 
 // ========== CORS ==========
 const allowedOrigins = [
@@ -46,7 +46,7 @@ const upload = multer({
 });
 
 // ========== ЯНДЕКС.ДИСК ==========
-const YANDEX_TOKEN = process.env.YANDEX_TOKEN; // Будет в переменных окружения Render
+const YANDEX_TOKEN = process.env.YANDEX_TOKEN;
 const YANDEX_API_URL = 'https://cloud-api.yandex.net/v1/disk';
 
 const yandexApi = axios.create({
@@ -81,10 +81,15 @@ async function publishFile(remotePath) {
 }
 
 async function getFileInfo(remotePath) {
-  const response = await yandexApi.get('/resources', {
-    params: { path: remotePath }
-  });
-  return response.data;
+  try {
+    const response = await yandexApi.get('/resources', {
+      params: { path: remotePath }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('❌ Ошибка получения информации о файле:', error.response?.data || error.message);
+    throw error;
+  }
 }
 
 async function deleteFile(remotePath) {
@@ -95,10 +100,15 @@ async function deleteFile(remotePath) {
 }
 
 async function getDownloadLink(remotePath) {
-  const response = await yandexApi.get('/resources/download', {
-    params: { path: remotePath }
-  });
-  return response.data.href;
+  try {
+    const response = await yandexApi.get('/resources/download', {
+      params: { path: remotePath }
+    });
+    return response.data.href;
+  } catch (error) {
+    console.error('❌ Ошибка получения ссылки на скачивание:', error.response?.data || error.message);
+    throw error;
+  }
 }
 
 async function uploadToYandex(fileBuffer, fileName) {
@@ -143,6 +153,7 @@ function compressAudio(inputBuffer, inputFormat) {
         const compressedBuffer = fs.readFileSync(outputPath);
         fs.unlinkSync(inputPath);
         fs.unlinkSync(outputPath);
+        console.log(`✅ Сжато: ${inputBuffer.length} → ${compressedBuffer.length} байт`);
         resolve(compressedBuffer);
       })
       .on('error', (err) => {
@@ -180,11 +191,12 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
         path: yandexFile.path,
         title: title || req.file.originalname,
         artist: artist || 'Unknown',
-        format: 'opus'
+        format: 'opus',
+        size: yandexFile.size
       }
     });
     
-    console.log('✅ Загрузка завершена');
+    console.log('✅ Загрузка завершена, путь:', yandexFile.path);
     
   } catch (error) {
     console.error('❌ Ошибка загрузки:', error);
@@ -195,52 +207,47 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   }
 });
 
-// ========== СТРИМИНГ ==========
+// ========== ИСПРАВЛЕННЫЙ СТРИМИНГ ==========
 app.get('/api/stream/:path(*)', async (req, res) => {
   try {
     const remotePath = decodeURIComponent(req.params.path);
-    console.log('🎵 Стриминг файла:', remotePath);
+    console.log('🎵 Запрос на стриминг пути:', remotePath);
+    
+    // Проверяем, есть ли файл
+    try {
+      const fileInfo = await getFileInfo(remotePath);
+      console.log('📁 Файл найден на Яндекс.Диске:', fileInfo.name);
+    } catch (error) {
+      console.error('❌ Файл не найден на Яндекс.Диске:', error.response?.data || error.message);
+      return res.status(404).json({ error: 'File not found on Yandex.Disk' });
+    }
     
     const downloadUrl = await getDownloadLink(remotePath);
-    const fileInfo = await getFileInfo(remotePath);
+    console.log('🔗 Ссылка на скачивание получена');
     
+    const fileInfo = await getFileInfo(remotePath);
     let mimeType = fileInfo.mime_type || 'audio/ogg';
-    console.log('🎵 MIME-тип из Яндекса:', mimeType);
     
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('Connection', 'keep-alive');
     res.setHeader('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
     
     const response = await axios({
       method: 'get',
       url: downloadUrl,
       responseType: 'stream',
-      timeout: 30000,
-      headers: {
-        'User-Agent': 'ForsityMusic/1.0'
-      }
+      timeout: 30000
     });
     
     if (response.headers['content-length']) {
       res.setHeader('Content-Length', response.headers['content-length']);
     }
     
-    if (response.headers['content-range']) {
-      res.setHeader('Content-Range', response.headers['content-range']);
-    }
-    
     response.data.pipe(res);
     
     response.data.on('error', (err) => {
       console.error('❌ Ошибка потока:', err);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Stream error' });
-      }
     });
     
   } catch (error) {
@@ -248,6 +255,34 @@ app.get('/api/stream/:path(*)', async (req, res) => {
     if (!res.headersSent) {
       res.status(500).json({ error: 'Streaming failed' });
     }
+  }
+});
+
+// ========== ПРОВЕРКА ФАЙЛА (ДЛЯ ОТЛАДКИ) ==========
+app.get('/api/check/:path(*)', async (req, res) => {
+  try {
+    const remotePath = decodeURIComponent(req.params.path);
+    console.log('🔍 Проверка файла:', remotePath);
+    
+    try {
+      const fileInfo = await getFileInfo(remotePath);
+      res.json({
+        exists: true,
+        path: remotePath,
+        name: fileInfo.name,
+        public_url: fileInfo.public_url,
+        mime_type: fileInfo.mime_type,
+        size: fileInfo.size
+      });
+    } catch (error) {
+      res.json({
+        exists: false,
+        path: remotePath,
+        error: error.response?.data?.message || error.message
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Check failed', details: error.message });
   }
 });
 
@@ -263,7 +298,7 @@ app.delete('/api/track/:path(*)', async (req, res) => {
   }
 });
 
-// ========== HEALTH CHECK (ДЛЯ ПИНГА) ==========
+// ========== HEALTH CHECK ==========
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
