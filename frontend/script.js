@@ -2,8 +2,8 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// Адрес бэкенд-сервера (ваш URL из Codespace)
-const API_URL = 'https://stunning-enigma-7vj6wv7x996vhx5px-3000.app.github.dev/api';
+// Адрес бэкенд-сервера (ваш Render URL)
+const API_URL = 'https://forsity-music-backend.onrender.com/api';
 
 // ========== ЭЛЕМЕНТЫ ==========
 // Шапка
@@ -100,7 +100,6 @@ function setupMediaSession(track) {
     
     console.log('🎵 Настройка Media Session для трека:', track.title);
     
-    // Метаданные для уведомления
     navigator.mediaSession.metadata = new MediaMetadata({
         title: track.title || 'Без названия',
         artist: track.artist || 'Неизвестный исполнитель',
@@ -118,7 +117,6 @@ function setupMediaSession(track) {
         ]
     });
     
-    // Устанавливаем обработчики кнопок (только один раз)
     if (!navigator.mediaSession._handlersSet) {
         navigator.mediaSession.setActionHandler('play', () => {
             audio.play();
@@ -153,7 +151,6 @@ function setupMediaSession(track) {
     
     navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
     
-    // Обновляем позицию
     if (audio.duration) {
         navigator.mediaSession.setPositionState({
             duration: audio.duration,
@@ -571,28 +568,23 @@ function playTrack(index) {
         const streamUrl = `${API_URL}/stream/${encodeURIComponent(tracks[index].path)}`;
         console.log('▶️ Воспроизведение через прокси:', streamUrl);
         
-        // Полностью сбрасываем аудио элемент
         audio.src = '';
         audio.removeAttribute('src');
         
-        // Удаляем все старые source элементы
         while (audio.firstChild) {
             audio.removeChild(audio.firstChild);
         }
         
-        // Создаем новый source элемент
         const source = document.createElement('source');
         source.src = streamUrl;
         source.type = 'audio/ogg';
         audio.appendChild(source);
         
-        // Добавляем еще один source на случай, если OGG не подойдет
         const source2 = document.createElement('source');
         source2.src = streamUrl;
         source2.type = 'audio/opus';
         audio.appendChild(source2);
         
-        // И еще один как audio/mpeg
         const source3 = document.createElement('source');
         source3.src = streamUrl;
         source3.type = 'audio/mpeg';
@@ -619,7 +611,6 @@ function playTrack(index) {
                 updateTracklist();
                 updateAlbumArt(tracks[currentTrackIndex]);
                 
-                // Вызываем Media Session API
                 setupMediaSession(tracks[currentTrackIndex]);
                 
                 if (!isEQInitialized) {
@@ -646,7 +637,6 @@ function playTrack(index) {
             navigator.mediaSession.playbackState = 'paused';
         };
         
-        // Таймаут на случай, если oncanplay не сработает
         setTimeout(() => {
             if (!isPlaying && audio.readyState >= 2) {
                 audio.play().catch(err => {
@@ -1561,7 +1551,6 @@ audio.addEventListener('timeupdate', () => {
         timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
     }
     
-    // Обновляем позицию в Media Session
     if ('mediaSession' in navigator && audio.duration) {
         navigator.mediaSession.setPositionState({
             duration: audio.duration,
@@ -1651,6 +1640,34 @@ function showNotification(message) {
         alert(message);
     }
 }
+
+// Кнопка установки PWA (опционально)
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    
+    const installBtn = document.createElement('button');
+    installBtn.id = 'installPwaBtn';
+    installBtn.className = 'install-btn hidden';
+    installBtn.textContent = '📲 Установить приложение';
+    
+    document.querySelector('.player-main-block').prepend(installBtn);
+    
+    installBtn.classList.remove('hidden');
+    
+    installBtn.addEventListener('click', () => {
+        installBtn.classList.add('hidden');
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('✅ Пользователь установил приложение');
+            }
+            deferredPrompt = null;
+        });
+    });
+});
 
 // Очистка временных ссылок при закрытии
 window.addEventListener('beforeunload', () => {
