@@ -7,34 +7,6 @@
     <link rel="stylesheet" href="style.css">
     <!-- Подключаем SDK Telegram -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
-    <!-- PWA Meta Tags -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#32007d">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="FORSITY MUSIC">
-    
-    <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" href="icons/maskable_icon_x192.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="icons/maskable_icon_x128.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="icons/maskable_icon_x192.png">
-    <link rel="apple-touch-icon" sizes="167x167" href="icons/maskable_icon_x128.png">
-    
-    <!-- Microsoft Tiles -->
-    <meta name="msapplication-TileColor" content="#32007d">
-    <meta name="msapplication-TileImage" content="icons/maskable_icon_x144.png">
-    
-    <!-- Регистрация Service Worker -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('✅ Service Worker зарегистрирован:', reg.scope))
-                    .catch(err => console.error('❌ Ошибка регистрации Service Worker:', err));
-            });
-        }
-    </script>
 </head>
 <body>
     <div class="app">
@@ -54,19 +26,14 @@
                     <button id="closeUploadModalBtn" class="close-btn">✕</button>
                 </div>
                 
-                <!-- Зона выбора файлов -->
                 <div class="file-select-area">
                     <input type="file" id="fileInput" accept=".mp3,audio/mpeg,audio/mp3" multiple>
                     <label for="fileInput" class="file-select-label">📁 Выберите файлы</label>
                     <p class="hint">Поддерживаются MP3 файлы</p>
                 </div>
 
-                <!-- Список треков для редактирования перед загрузкой -->
-                <div id="pendingTracksList" class="pending-tracks-list">
-                    <!-- Сюда будут добавляться треки для редактирования -->
-                </div>
+                <div id="pendingTracksList" class="pending-tracks-list"></div>
 
-                <!-- Кнопка подтверждения загрузки -->
                 <div class="upload-confirm">
                     <button id="confirmUploadBtn" class="confirm-upload-btn" disabled>✅ Загрузить все</button>
                 </div>
@@ -81,7 +48,6 @@
                     <button id="closePlaylistModalBtn" class="close-btn">✕</button>
                 </div>
                 
-                <!-- Форма создания плейлиста -->
                 <div class="playlist-form">
                     <div class="playlist-cover-container">
                         <canvas id="playlistCoverEdit" class="playlist-cover-edit" width="150" height="150"></canvas>
@@ -95,14 +61,10 @@
                         <input type="text" id="playlistSearchInput" placeholder="🔍 Поиск треков...">
                     </div>
                     
-                    <div class="available-tracks-list" id="availableTracksList">
-                        <!-- Список доступных треков -->
-                    </div>
+                    <div class="available-tracks-list" id="availableTracksList"></div>
                     
                     <h4>Треки в плейлисте:</h4>
-                    <div class="playlist-tracks-list" id="playlistTracksList">
-                        <!-- Треки в плейлисте -->
-                    </div>
+                    <div class="playlist-tracks-list" id="playlistTracksList"></div>
                     
                     <div class="playlist-actions">
                         <button id="savePlaylistBtn" class="save-playlist-btn">💾 Сохранить плейлист</button>
@@ -135,9 +97,7 @@
                     <button id="closePlaylistChoiceBtn" class="close-btn">✕</button>
                 </div>
                 
-                <div class="playlist-choice-list" id="playlistChoiceList">
-                    <!-- Список плейлистов для выбора -->
-                </div>
+                <div class="playlist-choice-list" id="playlistChoiceList"></div>
             </div>
         </div>
 
@@ -160,84 +120,61 @@
                 </div>
                 
                 <div class="eq-sliders">
-                    <!-- 16 Гц -->
                     <div class="eq-slider">
                         <label>16 Гц</label>
                         <input type="range" id="eq16" min="-12" max="12" value="0" step="0.5">
                         <span id="eq16Val" class="eq-value">0 dB</span>
                     </div>
-                    
-                    <!-- 32 Гц -->
                     <div class="eq-slider">
                         <label>32 Гц</label>
                         <input type="range" id="eq32" min="-12" max="12" value="0" step="0.5">
                         <span id="eq32Val" class="eq-value">0 dB</span>
                     </div>
-                    
-                    <!-- 64 Гц -->
                     <div class="eq-slider">
                         <label>64 Гц</label>
                         <input type="range" id="eq64" min="-12" max="12" value="0" step="0.5">
                         <span id="eq64Val" class="eq-value">0 dB</span>
                     </div>
-                    
-                    <!-- 125 Гц -->
                     <div class="eq-slider">
                         <label>125 Гц</label>
                         <input type="range" id="eq125" min="-12" max="12" value="0" step="0.5">
                         <span id="eq125Val" class="eq-value">0 dB</span>
                     </div>
-                    
-                    <!-- 250 Гц -->
                     <div class="eq-slider">
                         <label>250 Гц</label>
                         <input type="range" id="eq250" min="-12" max="12" value="0" step="0.5">
                         <span id="eq250Val" class="eq-value">0 dB</span>
                     </div>
-                    
-                    <!-- 500 Гц -->
                     <div class="eq-slider">
                         <label>500 Гц</label>
                         <input type="range" id="eq500" min="-12" max="12" value="0" step="0.5">
                         <span id="eq500Val" class="eq-value">0 dB</span>
                     </div>
-                    
-                    <!-- 1 кГц -->
                     <div class="eq-slider">
                         <label>1 кГц</label>
                         <input type="range" id="eq1k" min="-12" max="12" value="0" step="0.5">
                         <span id="eq1kVal" class="eq-value">0 dB</span>
                     </div>
-                    
-                    <!-- 2 кГц -->
                     <div class="eq-slider">
                         <label>2 кГц</label>
                         <input type="range" id="eq2k" min="-12" max="12" value="0" step="0.5">
                         <span id="eq2kVal" class="eq-value">0 dB</span>
                     </div>
-                    
-                    <!-- 4 кГц -->
                     <div class="eq-slider">
                         <label>4 кГц</label>
                         <input type="range" id="eq4k" min="-12" max="12" value="0" step="0.5">
                         <span id="eq4kVal" class="eq-value">0 dB</span>
                     </div>
-                    
-                    <!-- 8 кГц -->
                     <div class="eq-slider">
                         <label>8 кГц</label>
                         <input type="range" id="eq8k" min="-12" max="12" value="0" step="0.5">
                         <span id="eq8kVal" class="eq-value">0 dB</span>
                     </div>
-                    
-                    <!-- 16 кГц -->
                     <div class="eq-slider">
                         <label>16 кГц</label>
                         <input type="range" id="eq16k" min="-12" max="12" value="0" step="0.5">
                         <span id="eq16kVal" class="eq-value">0 dB</span>
                     </div>
-                    
-                    <!-- 22 кГц -->
                     <div class="eq-slider">
                         <label>22 кГц</label>
                         <input type="range" id="eq22k" min="-12" max="12" value="0" step="0.5">
@@ -253,12 +190,10 @@
 
         <!-- Главный блок плеера -->
         <div class="player-main-block">
-            <!-- Обложка текущего трека -->
             <div class="album-art-container">
                 <canvas id="albumArt" class="album-art" width="300" height="300"></canvas>
             </div>
             
-            <!-- Информация о текущем треке и кнопка эквалайзера -->
             <div class="track-info-row">
                 <div class="current-track-info">
                     <div id="currentTrackTitle" class="current-track-title">Нет трека</div>
@@ -267,12 +202,9 @@
                 <button id="toggleEqBtn" class="eq-button" title="Эквалайзер">🎚️</button>
             </div>
             
-            <!-- Ползунок прогресса -->
             <input type="range" id="progressBar" class="progress-bar" value="0" max="100">
-            
             <span id="timeDisplay" class="time-display">0:00 / 0:00</span>
             
-            <!-- Кнопки управления -->
             <div class="control-buttons-row">
                 <button id="repeatBtn" class="control-btn-circle" title="Режим повтора">🔁</button>
                 <button id="prevBtn" class="nav-btn-circle" title="Предыдущий трек">⏮️</button>
@@ -281,7 +213,6 @@
                 <button id="shuffleBtn" class="control-btn-circle" title="Перемешать">🔀</button>
             </div>
             
-            <!-- Регулятор громкости -->
             <div class="volume-control">
                 <span id="volumeIcon">🔊</span>
                 <input type="range" id="volumeSlider" min="0" max="100" value="60">
@@ -289,20 +220,13 @@
             </div>
         </div>
 
-        <!-- Список всех плейлистов (квадратики) -->
-        <div id="playlistsGrid" class="playlists-grid">
-            <!-- Плейлисты будут здесь -->
-        </div>
+        <div id="playlistsGrid" class="playlists-grid"></div>
 
-        <!-- Основной треклист -->
         <div class="tracklist">
             <h2>Мои треки</h2>
-            <ul id="tracklist" class="tracklist-ul">
-                <!-- Треки будут добавляться сюда -->
-            </ul>
+            <ul id="tracklist" class="tracklist-ul"></ul>
         </div>
 
-        <!-- Скрытый input для загрузки обложки плейлиста -->
         <input type="file" id="coverFileInput" accept="image/*" style="display: none;">
     </div>
     
