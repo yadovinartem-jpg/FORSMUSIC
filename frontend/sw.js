@@ -23,7 +23,6 @@ const CACHE_FILES = [
 self.addEventListener('install', (event) => {
   console.log('🔄 Service Worker устанавливается...');
   
-  // Ждём, пока кешируются все файлы
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -32,7 +31,7 @@ self.addEventListener('install', (event) => {
       })
       .then(() => {
         console.log('✅ Все файлы закешированы');
-        return self.skipWaiting(); // Активируем сразу
+        return self.skipWaiting();
       })
   );
 });
@@ -41,7 +40,6 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   console.log('🔄 Service Worker активируется...');
   
-  // Удаляем старые кеши
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -54,7 +52,7 @@ self.addEventListener('activate', (event) => {
       );
     }).then(() => {
       console.log('✅ Service Worker активирован');
-      return self.clients.claim(); // Начинаем управлять сразу
+      return self.clients.claim();
     })
   );
 });
@@ -70,18 +68,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Для всего остального - сначала из кеша, потом из сети
   event.respondWith(
     caches.match(event.request)
       .then((cachedResponse) => {
         if (cachedResponse) {
-          // Нашли в кеше - возвращаем
           return cachedResponse;
         }
         
-        // Нет в кеше - грузим из сети
         return fetch(event.request).then((networkResponse) => {
-          // Проверяем, можно ли кешировать ответ
           if (networkResponse && networkResponse.status === 200) {
             const responseClone = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
@@ -90,7 +84,6 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         }).catch(() => {
-          // Если нет сети и нет в кеше - показываем заглушку
           if (event.request.destination === 'document') {
             return caches.match('./index.html');
           }
@@ -99,7 +92,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// ========== ОБРАБОТКА PUSH-УВЕДОМЛЕНИЙ (опционально) ==========
+// ========== ОБРАБОТКА PUSH-УВЕДОМЛЕНИЙ ==========
 self.addEventListener('push', (event) => {
   const options = {
     body: event.data ? event.data.text() : 'Новое обновление!',
