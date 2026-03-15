@@ -63,8 +63,9 @@ const applyMyPresetBtn = document.getElementById('applyMyPresetBtn');
 const resetEqBtn = document.getElementById('resetEqBtn');
 const saveEqBtn = document.getElementById('saveEqBtn');
 
-// Аудио элемент
+// Аудио элемент с правильным crossorigin
 const audio = new Audio();
+audio.crossOrigin = 'anonymous'; // Критически важно для CORS и эквалайзера
 
 // ========== ДАННЫЕ ==========
 let isPlaying = false;
@@ -483,8 +484,8 @@ function playTrack(index) {
             return;
         }
         
-        // Двойное кодирование для безопасности
-        const encodedPath = encodeURIComponent(encodeURIComponent(tracks[index].path));
+        // Используем одинарное кодирование
+        const encodedPath = encodeURIComponent(tracks[index].path);
         const streamUrl = `${API_URL}/stream/${encodedPath}`;
         
         console.log('▶️ Попытка воспроизведения:', {
