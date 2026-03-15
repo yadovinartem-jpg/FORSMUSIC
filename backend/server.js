@@ -33,11 +33,22 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Range'],
+  exposedHeaders: ['Content-Length', 'Content-Range', 'Accept-Ranges']
 }));
 
 app.options('*', cors());
 app.use(express.json());
+
+// ========== ДОПОЛНИТЕЛЬНЫЕ CORS-ЗАГОЛОВКИ ==========
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Range, Authorization');
+  res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+  next();
+});
 
 // ========== MULTER ==========
 const upload = multer({ 
@@ -207,15 +218,16 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   }
 });
 
-// ========== ИСПРАВЛЕННЫЙ СТРИМИНГ ==========
+// ========== ИСПРАВЛЕННЫЙ СТРИМИНГ С ПРАВИЛЬНЫМИ CORS-ЗАГОЛОВКАМИ ==========
 app.get('/api/stream/:path(*)', async (req, res) => {
   try {
     const remotePath = decodeURIComponent(req.params.path);
     console.log('🎵 Запрос на стриминг пути:', remotePath);
     
     // Проверяем, есть ли файл
+    let fileInfo;
     try {
-      const fileInfo = await getFileInfo(remotePath);
+      fileInfo = await getFileInfo(remotePath);
       console.log('📁 Файл найден на Яндекс.Диске:', fileInfo.name);
     } catch (error) {
       console.error('❌ Файл не найден на Яндекс.Диске:', error.response?.data || error.message);
@@ -225,29 +237,54 @@ app.get('/api/stream/:path(*)', async (req, res) => {
     const downloadUrl = await getDownloadLink(remotePath);
     console.log('🔗 Ссылка на скачивание получена');
     
-    const fileInfo = await getFileInfo(remotePath);
     let mimeType = fileInfo.mime_type || 'audio/ogg';
     
+    // ВАЖНО: Правильные CORS-заголовки для поддержки эквалайзера
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Connection', 'keep-alive');
+    
+    // Критически важные заголовки для CORS и эквалайзера
     res.setHeader('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+    
+    // Для поддержки частичной загрузки (Range requests)
+    res.setHeader('Accept-Ranges', 'bytes');
     
     const response = await axios({
       method: 'get',
       url: downloadUrl,
       responseType: 'stream',
-      timeout: 30000
+      timeout: 30000,
+      headers: {
+        'User-Agent': 'ForsityMusic/1.0',
+        'Range': req.headers.range || '' // Передаём Range, если есть
+      }
     });
     
+    // Копируем все заголовки от Яндекс.Диска
     if (response.headers['content-length']) {
       res.setHeader('Content-Length', response.headers['content-length']);
     }
     
+    if (response.headers['content-range']) {
+      res.setHeader('Content-Range', response.headers['content-range']);
+    }
+    
+    // Передаём поток клиенту
     response.data.pipe(res);
     
     response.data.on('error', (err) => {
       console.error('❌ Ошибка потока:', err);
+      if (!res.headersSent) {
+        res.status(500).end();
+      }
     });
     
   } catch (error) {
@@ -256,6 +293,17 @@ app.get('/api/stream/:path(*)', async (req, res) => {
       res.status(500).json({ error: 'Streaming failed' });
     }
   }
+});
+
+// Обработка preflight OPTIONS запросов для стриминга
+app.options('/api/stream/:path(*)', (req, res) => {
+  res.header('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Range');
+  res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+  res.header('Access-Control-Max-Age', '86400');
+  res.sendStatus(204);
 });
 
 // ========== ПРОВЕРКА ФАЙЛА (ДЛЯ ОТЛАДКИ) ==========
