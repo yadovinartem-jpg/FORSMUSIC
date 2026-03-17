@@ -545,7 +545,9 @@ function updateRecentTracksList() {
     });
 }
 
-// [ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ]
+
+// ========== ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ ==========
+main
 function playTrack(index) {
     if (index >= 0 && index < tracks.length) {
         audio.pause();
