@@ -2272,7 +2272,6 @@ body {
   min-width: 38px;
   text-align: right;
 }
-
 /* ===== Requested fixes: volume/progress/playlists/eq ===== */
 .compact-volume {
   background: transparent !important;
