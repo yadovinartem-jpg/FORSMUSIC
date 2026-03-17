@@ -46,6 +46,10 @@ const playlistsGrid = document.getElementById('playlistsGrid');
 const tracklist = document.getElementById('tracklist');
 const trackSortSelect = document.getElementById('trackSortSelect');
 const recentTracksList = document.getElementById('recentTracksList');
+const trackSearchInput = document.getElementById('trackSearchInput');
+const searchResults = document.getElementById('searchResults');
+const localSearchResults = document.getElementById('localSearchResults');
+const remoteSearchResults = document.getElementById('remoteSearchResults');
 
 const playPauseBtn = document.getElementById('playPauseBtn');
 const prevBtn = document.getElementById('prevBtn');
@@ -86,6 +90,7 @@ let shuffleMode = false;
 let shuffledIndices = [];
 let recentTrackPaths = JSON.parse(localStorage.getItem('recent_tracks')) || [];
 let currentTrackSort = localStorage.getItem('track_sort') || 'date_desc';
+let trackSearchTimer = null;
 
 // [СОХРАНЕНИЕ И ЗАГРУЗКА ТРЕКОВ]
 function saveTracks() {
@@ -96,7 +101,8 @@ function saveTracks() {
             artist: track.artist,
             albumArt: track.albumArt,
             year: track.year || '',
-            addedAt: track.addedAt || Date.now()
+            addedAt: track.addedAt || Date.now(),
+            duration: track.duration || 0
         }));
         localStorage.setItem('forsity_tracks', JSON.stringify(tracksToSave));
         console.log('✅ Треки сохранены, количество:', tracks.length);
@@ -112,7 +118,8 @@ function loadTracks() {
             tracks = JSON.parse(saved).map((track, index) => ({
                 ...track,
                 year: track.year || '',
-                addedAt: track.addedAt || (Date.now() - index)
+                addedAt: track.addedAt || (Date.now() - index),
+                duration: Number(track.duration) || 0
             }));
             console.log('✅ Загружено треков из localStorage:', tracks.length);
         } else {
@@ -397,7 +404,8 @@ confirmUploadBtn.addEventListener('click', async () => {
                 artist: result.file.artist,
                 albumArt: track.albumArt,
                 year: track.year || '',
-                addedAt: track.addedAt || Date.now()
+                addedAt: track.addedAt || Date.now(),
+            duration: track.duration || 0
             });
             
             uploadedCount++;
@@ -507,12 +515,15 @@ function updateTracklist() {
             miniCoverHtml = canvas.outerHTML;
         }
         
+        const durationText = index === currentTrackIndex ? formatTime(audio.currentTime || 0) : formatTime(track.duration || 0);
+
         li.innerHTML = `
             ${miniCoverHtml}
             <div class="track-info">
                 <span class="track-title">${track.title || 'Без названия'}</span>
                 <span class="track-artist">${track.artist || ''}</span>
             </div>
+            <span class="track-duration" data-index="${index}">${durationText}</span>
             <button class="track-menu-btn">⋮</button>
         `;
         
@@ -526,6 +537,19 @@ function updateTracklist() {
         
         tracklist.appendChild(li);
     });
+}
+
+
+function updateActiveTrackTimeInList() {
+    if (currentTrackIndex < 0 || !tracklist) return;
+    const durationEl = tracklist.querySelector(`.track-duration[data-index="${currentTrackIndex}"]`);
+    if (!durationEl) return;
+
+    if (isPlaying || audio.currentTime > 0) {
+        durationEl.textContent = formatTime(audio.currentTime || 0);
+    } else {
+        durationEl.textContent = formatTime((tracks[currentTrackIndex] && tracks[currentTrackIndex].duration) || 0);
+    }
 }
 
 function saveRecentTracks() {
@@ -565,28 +589,7 @@ function updateRecentTracksList() {
         const li = document.createElement('li');
         li.className = 'recent-track-item';
 
-        let coverHtml = '';
-        if (track.albumArt) {
-            const img = document.createElement('img');
-            img.className = 'track-mini-cover';
-            img.src = track.albumArt;
-            coverHtml = img.outerHTML;
-        } else {
-            const canvas = document.createElement('canvas');
-            canvas.className = 'track-mini-cover';
-            canvas.width = 46;
-            canvas.height = 46;
-            const miniCtx = canvas.getContext('2d');
-            const gradient = miniCtx.createLinearGradient(0, 0, 46, 46);
-            gradient.addColorStop(0, '#32007d');
-            gradient.addColorStop(1, '#000000');
-            miniCtx.fillStyle = gradient;
-            miniCtx.fillRect(0, 0, 46, 46);
-            coverHtml = canvas.outerHTML;
-        }
-
         li.innerHTML = `
-            ${coverHtml}
             <div class="track-info">
                 <span class="track-title">${track.title || 'Без названия'}</span>
                 <span class="track-artist">${track.artist || ''}</span>
@@ -595,6 +598,86 @@ function updateRecentTracksList() {
 
         li.addEventListener('click', () => playTrack(index));
         recentTracksList.appendChild(li);
+    });
+}
+
+
+function renderSearchList(listElement, items, { clickable = false } = {}) {
+    if (!listElement) return;
+    listElement.innerHTML = '';
+
+    if (!items || items.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'search-item empty';
+        li.textContent = 'Ничего не найдено';
+        listElement.appendChild(li);
+        return;
+    }
+
+    items.forEach((item) => {
+        const li = document.createElement('li');
+        li.className = 'search-item';
+        li.innerHTML = `
+            <span class="search-title">${item.title || 'Без названия'}</span>
+            <span class="search-artist">${item.artist || ''}</span>
+        `;
+
+        if (clickable && Number.isInteger(item.index)) {
+            li.addEventListener('click', () => playTrack(item.index));
+        }
+
+        listElement.appendChild(li);
+    });
+}
+
+async function fetchRemoteTracksByTitle(query) {
+    try {
+        const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=20`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return (data.results || []).map((item) => ({
+            title: item.trackName || 'Без названия',
+            artist: item.artistName || ''
+        }));
+    } catch (e) {
+        return [];
+    }
+}
+
+async function handleTrackSearch() {
+    if (!trackSearchInput || !searchResults) return;
+
+    const query = trackSearchInput.value.trim().toLowerCase();
+
+    if (!query) {
+        searchResults.classList.add('hidden');
+        if (localSearchResults) localSearchResults.innerHTML = '';
+        if (remoteSearchResults) remoteSearchResults.innerHTML = '';
+        return;
+    }
+
+    const localMatches = tracks
+        .map((track, index) => ({ ...track, index }))
+        .filter((track) => (track.title || '').toLowerCase().includes(query));
+
+    const remoteMatchesRaw = await fetchRemoteTracksByTitle(query);
+    const localKey = new Set(localMatches.map((t) => `${(t.title || '').toLowerCase()}::${(t.artist || '').toLowerCase()}`));
+    const remoteMatches = remoteMatchesRaw.filter((t) => !localKey.has(`${(t.title || '').toLowerCase()}::${(t.artist || '').toLowerCase()}`));
+
+    renderSearchList(localSearchResults, localMatches, { clickable: true });
+    renderSearchList(remoteSearchResults, remoteMatches);
+
+    searchResults.classList.remove('hidden');
+}
+
+function initTrackSearch() {
+    if (!trackSearchInput) return;
+
+    trackSearchInput.addEventListener('input', () => {
+        clearTimeout(trackSearchTimer);
+        trackSearchTimer = setTimeout(() => {
+            handleTrackSearch();
+        }, 250);
     });
 }
 
@@ -1604,6 +1687,7 @@ audio.addEventListener('timeupdate', () => {
         const progress = (audio.currentTime / audio.duration) * 100;
         progressBar.value = progress;
         timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+        updateActiveTrackTimeInList();
     }
 });
 
@@ -1626,6 +1710,12 @@ audio.addEventListener('ended', () => {
 audio.addEventListener('loadedmetadata', () => {
     if (timeDisplay) {
         timeDisplay.textContent = `0:00 / ${formatTime(audio.duration)}`;
+    }
+
+    if (currentTrackIndex >= 0 && tracks[currentTrackIndex]) {
+        tracks[currentTrackIndex].duration = Number(audio.duration) || 0;
+        saveTracks();
+        updateTracklist();
     }
 });
 
@@ -1671,6 +1761,16 @@ document.addEventListener('DOMContentLoaded', function() {
     updatePlayPauseButton();
     updateAlbumArt(null);
     updateRecentTracksList();
+    initTrackSearch();
+
+    if (trackSortSelect) {
+        trackSortSelect.value = currentTrackSort;
+        trackSortSelect.addEventListener('change', (e) => {
+            currentTrackSort = e.target.value;
+            localStorage.setItem('track_sort', currentTrackSort);
+            updateTracklist();
+        });
+    }
 
     if (trackSortSelect) {
         trackSortSelect.value = currentTrackSort;

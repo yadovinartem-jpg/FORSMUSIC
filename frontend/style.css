@@ -1789,3 +1789,281 @@ body {
   height: 30px;
 }
 
+/* ===== Requested UI tweaks ===== */
+.recent-section,
+.playlists-section,
+.center-tracklist {
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.upload-btn-header::before {
+  content: "";
+}
+
+.upload-plus-only {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.center-progress-zone .current-track-info {
+  display: block;
+  text-align: right;
+  margin-bottom: 3px;
+}
+
+.center-progress-zone .current-track-title {
+  display: block;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.center-progress-zone .current-track-artist {
+  display: block;
+  font-size: 11px;
+  color: #9aa7c3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.time-display {
+  display: block;
+  text-align: right;
+  font-size: 11px;
+  margin: 0 0 3px;
+}
+
+#progressBar {
+  margin-top: 4px;
+}
+
+.recent-tracks-list {
+  grid-auto-columns: minmax(150px, 150px);
+}
+
+.recent-track-item {
+  min-height: 42px;
+  padding: 4px 7px;
+  gap: 8px;
+}
+
+.recent-track-item .track-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.recent-track-item .track-title,
+.recent-track-item .track-artist {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-track-item .track-title {
+  font-size: 12px;
+}
+
+.recent-track-item .track-artist {
+  font-size: 11px;
+}
+
+.tracklist-item {
+  padding: 12px 8px;
+  gap: 12px;
+}
+
+.tracklist-item .track-mini-cover {
+  width: 36px;
+  height: 36px;
+}
+
+.tracklist-item .track-title {
+  font-size: 15px;
+}
+
+.tracklist-item .track-artist {
+  font-size: 14px;
+}
+
+.track-duration {
+  font-size: 12px;
+  color: #aeb9d2;
+  min-width: 56px;
+  text-align: right;
+}
+
+.tracklist-item .track-menu-btn {
+  padding: 4px 8px;
+}
+
+/* ===== Requested visual update ===== */
+body {
+  background: #090b10;
+}
+
+.header,
+.vk-top-player,
+.recent-section,
+.playlists-section,
+.center-tracklist,
+.tracklist,
+.playlist-square,
+.recent-track-item {
+  background: #090b10 !important;
+}
+
+.header h1 {
+  font-size: 16px;
+}
+
+.center-progress-zone .current-track-info {
+  text-align: left;
+}
+
+.center-progress-zone .current-track-title,
+.center-progress-zone .current-track-artist,
+.time-display {
+  text-align: left;
+}
+
+.center-progress-zone {
+  display: flex;
+  flex-direction: column;
+}
+
+.time-display {
+  order: 1;
+}
+
+#progressBar {
+  order: 2;
+  margin-top: 6px;
+}
+
+#shuffleBtn::before,
+#shuffleBtn::after {
+  left: 8px;
+  width: 14px;
+  height: 2px;
+  background: #dbe4f8;
+}
+#shuffleBtn::before {
+  top: 10px;
+  transform: rotate(0deg);
+  box-shadow: 4px -3px 0 -1px #dbe4f8;
+}
+#shuffleBtn::after {
+  top: 18px;
+  transform: rotate(0deg);
+  box-shadow: 4px 3px 0 -1px #dbe4f8;
+}
+
+#repeatBtn::before {
+  left: 7px;
+  top: 9px;
+  width: 14px;
+  height: 10px;
+  border: 2px solid #dbe4f8;
+  border-left-color: transparent;
+  border-radius: 3px;
+}
+#repeatBtn::after {
+  content: "";
+  position: absolute;
+  right: 6px;
+  top: 8px;
+  border-left: 5px solid #dbe4f8;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+
+.recent-tracks-list {
+  grid-auto-columns: minmax(132px, 132px);
+}
+
+.recent-track-item {
+  padding: 6px 8px;
+}
+
+.recent-track-item .track-info {
+  width: 100%;
+}
+
+.recent-track-item .track-title,
+.recent-track-item .track-artist {
+  width: 100%;
+}
+
+.search-section {
+  max-width: 760px;
+  margin: 0 auto 12px;
+}
+
+.track-search-input {
+  width: 100%;
+  background: #0f1320;
+  color: #e6ecfb;
+  border: 1px solid #2a3040;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.search-results {
+  margin-top: 8px;
+  border: 1px solid #2a3040;
+  border-radius: 10px;
+  padding: 10px;
+  background: #090b10;
+}
+
+.search-group + .search-group {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #2a3040;
+}
+
+.search-group h3 {
+  font-size: 12px;
+  color: #b0bbd4;
+  margin-bottom: 6px;
+}
+
+.search-list {
+  list-style: none;
+}
+
+.search-item {
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.search-item:hover {
+  background: #131824;
+}
+
+.search-item.empty {
+  color: #8a95ac;
+  cursor: default;
+}
+
+.search-title,
+.search-artist {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-title { font-size: 13px; }
+.search-artist { font-size: 12px; color: #96a3bf; }
+
+.hidden { display: none !important; }

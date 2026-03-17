@@ -15,8 +15,7 @@
             <h1>ALVAREZ</h1>
             <div class="header-actions">
                 <button id="uploadBtn" class="upload-btn-header" title="Загрузить трек" aria-label="Добавить трек">
-                    <span class="upload-note-icon"></span>
-                    <span class="upload-plus-icon"></span>
+                    <span class="upload-plus-only">+</span>
                 </button>
 
             </div>
@@ -213,8 +212,8 @@
                     <div id="currentTrackTitle" class="current-track-title">Нет трека</div>
                     <div id="currentTrackArtist" class="current-track-artist"></div>
                 </div>
-                <input type="range" id="progressBar" class="progress-bar" value="0" max="100">
                 <span id="timeDisplay" class="time-display">0:00 / 0:00</span>
+                <input type="range" id="progressBar" class="progress-bar" value="0" max="100">
             </div>
 
             <div class="right-controls">
@@ -227,6 +226,20 @@
                 <button id="toggleEqBtn" class="icon-btn eq-button" title="Эквалайзер" aria-label="Эквалайзер"></button>
             </div>
         </div>
+
+        <section class="search-section">
+            <input id="trackSearchInput" class="track-search-input" type="search" placeholder="Поиск треков по названию..." aria-label="Поиск треков">
+            <div id="searchResults" class="search-results hidden">
+                <div class="search-group">
+                    <h3>В вашей библиотеке</h3>
+                    <ul id="localSearchResults" class="search-list"></ul>
+                </div>
+                <div class="search-group">
+                    <h3>Найдено</h3>
+                    <ul id="remoteSearchResults" class="search-list"></ul>
+                </div>
+            </div>
+        </section>
 
         <section class="recent-section">
             <h2>Недавно прослушанные</h2>
@@ -242,11 +255,10 @@
             <div class="tracklist-header">
                 <h2>Треки</h2>
                 <select id="trackSortSelect" class="track-sort-select" aria-label="Сортировка треков">
-                    <option value="date_desc">По дате добавления (новые)</option>
+                    <option value="date_desc">По дате добавления</option>
                     <option value="alpha">По алфавиту</option>
                     <option value="artist">По исполнителю</option>
                     <option value="year_desc">По году</option>
-                    <option value="title">По названию</option>
                 </select>
             </div>
             <ul id="tracklist" class="tracklist-ul"></ul>
