@@ -443,6 +443,7 @@ function getSortedTrackEntries() {
 
         switch (currentTrackSort) {
             case 'alpha':
+            case 'title':
                 return av.title.localeCompare(bv.title, 'ru');
             case 'artist':
                 return av.artist.localeCompare(bv.artist, 'ru') || av.title.localeCompare(bv.title, 'ru');
@@ -1761,6 +1762,15 @@ document.addEventListener('DOMContentLoaded', function() {
     updateAlbumArt(null);
     updateRecentTracksList();
     initTrackSearch();
+
+    if (trackSortSelect) {
+        trackSortSelect.value = currentTrackSort;
+        trackSortSelect.addEventListener('change', (e) => {
+            currentTrackSort = e.target.value;
+            localStorage.setItem('track_sort', currentTrackSort);
+            updateTracklist();
+        });
+    }
 
     if (trackSortSelect) {
         trackSortSelect.value = currentTrackSort;
