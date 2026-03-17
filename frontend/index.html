@@ -88,7 +88,8 @@
                 
                 <div class="track-menu-actions">
                     <button id="showAddToPlaylistBtn" class="track-action-btn">📋 Добавить в плейлист</button>
-                    <button id="deleteTrackBtn" class="track-action-btn delete">🗑️ Удалить трек</button>
+                    <button id="deleteTrackLocalBtn" class="track-action-btn delete">🗑️ Удалить из треклиста</button>
+                    <button id="deleteTrackCloudBtn" class="track-action-btn delete">☁️🗑️ Удалить из облака и треклиста</button>
                 </div>
             </div>
         </div>
@@ -238,7 +239,16 @@
         </section>
 
         <section class="tracklist center-tracklist">
-            <h2>Основной треклист</h2>
+            <div class="tracklist-header">
+                <h2>Треки</h2>
+                <select id="trackSortSelect" class="track-sort-select" aria-label="Сортировка треков">
+                    <option value="date_desc">По дате добавления (новые)</option>
+                    <option value="alpha">По алфавиту</option>
+                    <option value="artist">По исполнителю</option>
+                    <option value="year_desc">По году</option>
+                    <option value="title">По названию</option>
+                </select>
+            </div>
             <ul id="tracklist" class="tracklist-ul"></ul>
         </section>
 
