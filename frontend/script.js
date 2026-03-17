@@ -5,7 +5,7 @@ tg.expand();
 // Адрес бэкенд-сервера (ваш Codespace URL)
 const API_URL = 'https://stunning-enigma-7vj6wv7x996vhx5px-3000.app.github.dev/api';
 
-// ========== ЭЛЕМЕНТЫ ==========
+// [ЭЛЕМЕНТЫ]
 const uploadBtn = document.getElementById('uploadBtn');
 const uploadModal = document.getElementById('uploadModal');
 const closeUploadModalBtn = document.getElementById('closeUploadModalBtn');
@@ -41,6 +41,7 @@ const closeEqModalBtn = document.getElementById('closeEqModalBtn');
 
 const playlistsGrid = document.getElementById('playlistsGrid');
 const tracklist = document.getElementById('tracklist');
+const recentTracksList = document.getElementById('recentTracksList');
 
 const playPauseBtn = document.getElementById('playPauseBtn');
 const prevBtn = document.getElementById('prevBtn');
@@ -62,12 +63,13 @@ const qValue = document.getElementById('qValue');
 const applyMyPresetBtn = document.getElementById('applyMyPresetBtn');
 const resetEqBtn = document.getElementById('resetEqBtn');
 const saveEqBtn = document.getElementById('saveEqBtn');
+const moreActionsBtn = document.getElementById('moreActionsBtn');
 
 // Аудио элемент с правильным crossorigin
 const audio = new Audio();
 audio.crossOrigin = 'anonymous'; // Критически важно для CORS и эквалайзера
 
-// ========== ДАННЫЕ ==========
+// [ДАННЫЕ]
 let isPlaying = false;
 let currentTrackIndex = -1;
 let tracks = [];
@@ -78,8 +80,9 @@ let currentTrackForMenu = null;
 let repeatMode = 0;
 let shuffleMode = false;
 let shuffledIndices = [];
+let recentTrackPaths = JSON.parse(localStorage.getItem('recent_tracks')) || [];
 
-// ========== СОХРАНЕНИЕ И ЗАГРУЗКА ТРЕКОВ ==========
+// [СОХРАНЕНИЕ И ЗАГРУЗКА ТРЕКОВ]
 function saveTracks() {
     try {
         const tracksToSave = tracks.map(track => ({
@@ -116,10 +119,10 @@ function loadTracks() {
 // Загружаем треки при старте
 loadTracks();
 
-// ========== ИНИЦИАЛИЗАЦИЯ ==========
+// [ИНИЦИАЛИЗАЦИЯ]
 updatePlaylistsGrid();
 
-// ========== ФУНКЦИИ ДЛЯ РИСОВАНИЯ ==========
+// [ФУНКЦИИ ДЛЯ РИСОВАНИЯ]
 function drawGradientAlbumArt(canvas) {
     if (!canvas || !canvas.getContext) return;
     const ctx = canvas.getContext('2d');
@@ -142,7 +145,7 @@ function drawImageAlbumArt(canvas, img) {
 if (albumArt) drawGradientAlbumArt(albumArt);
 if (playlistCoverEdit) drawGradientAlbumArt(playlistCoverEdit);
 
-// ========== ФУНКЦИИ ДЛЯ РАБОТЫ С MP3 ==========
+// [ФУНКЦИИ ДЛЯ РАБОТЫ С MP3]
 function loadJsMediaTags() {
     return new Promise((resolve, reject) => {
         if (window.jsmediatags) {
@@ -207,7 +210,7 @@ async function extractMetadata(file) {
     }
 }
 
-// ========== ЗАГРУЗКА ТРЕКОВ ==========
+// [ЗАГРУЗКА ТРЕКОВ]
 uploadBtn.addEventListener('click', () => {
     uploadModal.classList.remove('hidden');
     fileInput.value = '';
@@ -338,7 +341,7 @@ function hideLoading() {
     if (loader) loader.remove();
 }
 
-// ========== ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ ==========
+// [ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ]
 confirmUploadBtn.addEventListener('click', async () => {
     showLoading('Загрузка и сжатие треков...');
     
@@ -393,7 +396,7 @@ confirmUploadBtn.addEventListener('click', async () => {
     console.log('✅ Загружено треков:', uploadedCount);
 });
 
-// ========== ТРЕКЛИСТ ==========
+// [ТРЕКЛИСТ]
 function updateTracklist() {
     if (!tracklist) return;
     
@@ -472,12 +475,83 @@ function updateTracklist() {
     });
 }
 
-// ========== ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ ==========
+function saveRecentTracks() {
+    localStorage.setItem('recent_tracks', JSON.stringify(recentTrackPaths));
+}
+
+function addTrackToRecent(track) {
+    if (!track || !track.path) return;
+    recentTrackPaths = recentTrackPaths.filter(path => path !== track.path);
+    recentTrackPaths.unshift(track.path);
+    recentTrackPaths = recentTrackPaths.slice(0, 30);
+    saveRecentTracks();
+    updateRecentTracksList();
+}
+
+function updateRecentTracksList() {
+    if (!recentTracksList) return;
+    recentTracksList.innerHTML = '';
+
+    const recentTracks = recentTrackPaths
+        .map(path => tracks.find(track => track.path === path))
+        .filter(Boolean);
+
+    if (recentTracks.length === 0) {
+        const li = document.createElement('li');
+        li.textContent = 'Пока нет недавно прослушанных треков';
+        li.style.color = '#8f9ab3';
+        li.style.padding = '12px 0';
+        recentTracksList.appendChild(li);
+        return;
+    }
+
+    recentTracks.forEach((track) => {
+        const index = tracks.findIndex(t => t.path === track.path);
+        if (index === -1) return;
+
+        const li = document.createElement('li');
+        li.className = 'recent-track-item';
+
+        let coverHtml = '';
+        if (track.albumArt) {
+            const img = document.createElement('img');
+            img.className = 'track-mini-cover';
+            img.src = track.albumArt;
+            coverHtml = img.outerHTML;
+        } else {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'track-mini-cover';
+            canvas.width = 46;
+            canvas.height = 46;
+            const miniCtx = canvas.getContext('2d');
+            const gradient = miniCtx.createLinearGradient(0, 0, 46, 46);
+            gradient.addColorStop(0, '#32007d');
+            gradient.addColorStop(1, '#000000');
+            miniCtx.fillStyle = gradient;
+            miniCtx.fillRect(0, 0, 46, 46);
+            coverHtml = canvas.outerHTML;
+        }
+
+        li.innerHTML = `
+            ${coverHtml}
+            <div class="track-info">
+                <span class="track-title">${track.title || 'Без названия'}</span>
+                <span class="track-artist">${track.artist || ''}</span>
+            </div>
+        `;
+
+        li.addEventListener('click', () => playTrack(index));
+        recentTracksList.appendChild(li);
+    });
+}
+
+// [ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ]
 function playTrack(index) {
     if (index >= 0 && index < tracks.length) {
         audio.pause();
         
         currentTrackIndex = index;
+        addTrackToRecent(tracks[index]);
         
         if (!tracks[index].path) {
             console.error('❌ У трека нет path:', tracks[index]);
@@ -507,7 +581,7 @@ function playTrack(index) {
             console.error('❌ Audio error message:', audio.error ? audio.error.message : 'unknown');
             console.error('❌ Audio src:', audio.src);
             isPlaying = false;
-            if (playPauseBtn) playPauseBtn.textContent = '▶️';
+            updatePlayPauseButton();
         };
         
         audio.oncanplay = function() {
@@ -515,7 +589,7 @@ function playTrack(index) {
             audio.play().then(() => {
                 console.log('✅ Воспроизведение успешно');
                 isPlaying = true;
-                if (playPauseBtn) playPauseBtn.textContent = '⏸️';
+                updatePlayPauseButton();
                 updateTracklist();
                 updateAlbumArt(tracks[currentTrackIndex]);
                 
@@ -528,14 +602,14 @@ function playTrack(index) {
             }).catch(error => {
                 console.error('❌ Play error:', error);
                 isPlaying = false;
-                if (playPauseBtn) playPauseBtn.textContent = '▶️';
+                updatePlayPauseButton();
             });
         };
         
         audio.onplaying = function() {
             console.log('▶️ Воспроизведение началось');
             isPlaying = true;
-            if (playPauseBtn) playPauseBtn.textContent = '⏸️';
+            updatePlayPauseButton();
         };
         
         setTimeout(() => {
@@ -548,7 +622,7 @@ function playTrack(index) {
     }
 }
 
-// ========== ПРОВЕРКА ФАЙЛА ПЕРЕД ВОСПРОИЗВЕДЕНИЕМ ==========
+// [ПРОВЕРКА ФАЙЛА ПЕРЕД ВОСПРОИЗВЕДЕНИЕМ]
 async function checkTrackBeforePlay(index) {
     if (!tracks[index] || !tracks[index].path) return false;
     
@@ -569,7 +643,7 @@ async function checkTrackBeforePlay(index) {
     }
 }
 
-// ========== МЕНЮ ТРЕКА ==========
+// [МЕНЮ ТРЕКА]
 function openTrackMenu(trackIndex) {
     currentTrackForMenu = trackIndex;
     trackMenu.classList.remove('hidden');
@@ -585,7 +659,7 @@ trackMenu.addEventListener('click', (e) => {
     }
 });
 
-// ========== ДОБАВЛЕНИЕ В ПЛЕЙЛИСТ ==========
+// [ДОБАВЛЕНИЕ В ПЛЕЙЛИСТ]
 showAddToPlaylistBtn.addEventListener('click', () => {
     trackMenu.classList.add('hidden');
     updatePlaylistChoiceList();
@@ -668,7 +742,7 @@ function addTrackToPlaylist(playlistId) {
     playlistChoiceMenu.classList.add('hidden');
 }
 
-// ========== УДАЛЕНИЕ ТРЕКА ==========
+// [УДАЛЕНИЕ ТРЕКА]
 deleteTrackBtn.addEventListener('click', async () => {
     if (currentTrackForMenu === null) return;
     
@@ -696,7 +770,7 @@ deleteTrackBtn.addEventListener('click', async () => {
     if (currentTrackIndex === currentTrackForMenu) {
         audio.pause();
         isPlaying = false;
-        playPauseBtn.textContent = '▶️';
+        updatePlayPauseButton();
         currentTrackIndex = -1;
         updateAlbumArt(null);
         progressBar.value = 0;
@@ -711,7 +785,7 @@ deleteTrackBtn.addEventListener('click', async () => {
     currentTrackForMenu = null;
 });
 
-// ========== ПЛЕЙЛИСТЫ ==========
+// [ПЛЕЙЛИСТЫ]
 function updatePlaylistsGrid() {
     playlistsGrid.innerHTML = '';
     
@@ -1041,7 +1115,7 @@ if (playlistSearchInput) {
     playlistSearchInput.addEventListener('input', updateAvailableTracksList);
 }
 
-// ========== ОБЛОЖКА ПЛЕЙЛИСТА ==========
+// [ОБЛОЖКА ПЛЕЙЛИСТА]
 changePlaylistCoverBtn.addEventListener('click', () => {
     coverFileInput.click();
 });
@@ -1071,7 +1145,7 @@ coverFileInput.addEventListener('change', (e) => {
     reader.readAsDataURL(file);
 });
 
-// ========== ФУНКЦИИ ПЛЕЕРА ==========
+// [ФУНКЦИИ ПЛЕЕРА]
 function updateAlbumArt(track) {
     if (!albumArt) return;
     
@@ -1151,20 +1225,25 @@ function togglePlay() {
     
     if (isPlaying) {
         audio.pause();
-        if (playPauseBtn) playPauseBtn.textContent = '▶️';
+        updatePlayPauseButton();
         isPlaying = false;
     } else {
         if (currentTrackIndex === -1) {
             playTrack(0);
         } else {
             audio.play().then(() => {
-                if (playPauseBtn) playPauseBtn.textContent = '⏸️';
+                updatePlayPauseButton();
                 isPlaying = true;
             }).catch(error => {
                 console.error('❌ Play error:', error);
             });
         }
     }
+}
+
+function updatePlayPauseButton() {
+    if (!playPauseBtn) return;
+    playPauseBtn.dataset.state = isPlaying ? 'pause' : 'play';
 }
 
 function playNext() {
@@ -1193,7 +1272,7 @@ function playPrev() {
 
 function updateModeButtons() {
     if (repeatBtn) {
-        repeatBtn.textContent = repeatMode === 0 ? '🔁' : repeatMode === 1 ? '🔁' : '🔂';
+        repeatBtn.dataset.mode = repeatMode === 0 ? 'off' : repeatMode === 1 ? 'all' : 'one';
         repeatBtn.classList.toggle('active', repeatMode !== 0);
     }
     
@@ -1215,7 +1294,7 @@ shuffleBtn.addEventListener('click', () => {
     updateModeButtons();
 });
 
-// ========== ЭКВАЛАЙЗЕР ==========
+// [ЭКВАЛАЙЗЕР]
 let audioContext = null;
 let source = null;
 let filters = [];
@@ -1418,7 +1497,7 @@ function initEQSliders() {
     }
 }
 
-// ========== УПРАВЛЕНИЕ ЭКВАЛАЙЗЕРОМ ==========
+// [УПРАВЛЕНИЕ ЭКВАЛАЙЗЕРОМ]
 toggleEqBtn.addEventListener('click', () => {
     eqModal.classList.remove('hidden');
 });
@@ -1443,7 +1522,7 @@ saveEqBtn.addEventListener('click', () => {
     localStorage.setItem('eqSettings', JSON.stringify(eqSettings));
 });
 
-// ========== СОБЫТИЯ ПЛЕЕРА ==========
+// [СОБЫТИЯ ПЛЕЕРА]
 playPauseBtn.addEventListener('click', togglePlay);
 prevBtn.addEventListener('click', playPrev);
 nextBtn.addEventListener('click', playNext);
@@ -1469,7 +1548,7 @@ audio.addEventListener('ended', () => {
         playTrack(nextIndex);
     } else {
         isPlaying = false;
-        if (playPauseBtn) playPauseBtn.textContent = '▶️';
+        updatePlayPauseButton();
         currentTrackIndex = -1;
         if (progressBar) progressBar.value = 0;
         if (timeDisplay) timeDisplay.textContent = '0:00 / 0:00';
@@ -1484,7 +1563,7 @@ audio.addEventListener('loadedmetadata', () => {
     }
 });
 
-// ========== ГРОМКОСТЬ ==========
+// [ГРОМКОСТЬ]
 function initVolume() {
     if (!volumeSlider || !volumePercent || !volumeIcon) return;
     
@@ -1511,19 +1590,28 @@ function initVolume() {
 
 function updateVolumeIcon(volume) {
     if (!volumeIcon) return;
-    if (volume == 0) volumeIcon.textContent = '🔇';
-    else if (volume < 30) volumeIcon.textContent = '🔈';
-    else if (volume < 70) volumeIcon.textContent = '🔉';
-    else volumeIcon.textContent = '🔊';
+    if (volume == 0) volumeIcon.dataset.level = 'mute';
+    else if (volume < 30) volumeIcon.dataset.level = 'low';
+    else if (volume < 70) volumeIcon.dataset.level = 'mid';
+    else volumeIcon.dataset.level = 'high';
 }
 
-// ========== ИНИЦИАЛИЗАЦИЯ ==========
+// [ИНИЦИАЛИЗАЦИЯ]
 document.addEventListener('DOMContentLoaded', function() {
     initVolume();
     loadEQSettings();
     initEQSliders();
     updateModeButtons();
+    updatePlayPauseButton();
     updateAlbumArt(null);
+    updateRecentTracksList();
+
+    if (moreActionsBtn) {
+        moreActionsBtn.addEventListener('click', () => {
+            if (currentTrackIndex === -1) return;
+            openTrackMenu(currentTrackIndex);
+        });
+    }
     
     tg.ready();
 });

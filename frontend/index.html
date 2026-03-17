@@ -12,9 +12,12 @@
     <div class="app">
         <!-- Шапка с загрузкой -->
         <div class="header">
-            <h1>FOR<span class="sity">SITY</span> MUSIC</h1>
+            <h1>ALVAREZ</h1>
             <div class="header-actions">
-                <button id="uploadBtn" class="upload-btn-header" title="Загрузить трек">⬆️</button>
+                <button id="uploadBtn" class="upload-btn-header" title="Загрузить трек" aria-label="Добавить трек">
+                    <span class="upload-note-icon"></span>
+                    <span class="upload-plus-icon"></span>
+                </button>
             </div>
         </div>
 
@@ -188,44 +191,54 @@
             </div>
         </div>
 
-        <!-- Главный блок плеера -->
-        <div class="player-main-block">
-            <div class="album-art-container">
-                <canvas id="albumArt" class="album-art" width="300" height="300"></canvas>
+        <!-- Верхняя длинная панель плеера (как в VK-подобной компоновке) -->
+        <div class="player-main-block vk-top-player">
+            <div class="left-controls">
+                <button id="prevBtn" class="icon-btn nav-btn-circle" title="Предыдущий трек" aria-label="Назад"></button>
+                <button id="playPauseBtn" class="icon-btn play-btn-circle" title="Пуск / Пауза" aria-label="Пуск или пауза"></button>
+                <button id="nextBtn" class="icon-btn nav-btn-circle" title="Следующий трек" aria-label="Вперёд"></button>
+                <button id="shuffleBtn" class="icon-btn control-btn-circle" title="Случайный порядок" aria-label="Случайный порядок"></button>
+                <button id="repeatBtn" class="icon-btn control-btn-circle" title="Режим повтора" aria-label="Режим повтора"></button>
             </div>
-            
-            <div class="track-info-row">
+
+            <div class="album-art-container compact-art">
+                <canvas id="albumArt" class="album-art" width="64" height="64"></canvas>
+            </div>
+
+            <div class="center-progress-zone">
                 <div class="current-track-info">
                     <div id="currentTrackTitle" class="current-track-title">Нет трека</div>
                     <div id="currentTrackArtist" class="current-track-artist"></div>
                 </div>
-                <button id="toggleEqBtn" class="eq-button" title="Эквалайзер">🎚️</button>
+                <input type="range" id="progressBar" class="progress-bar" value="0" max="100">
+                <span id="timeDisplay" class="time-display">0:00 / 0:00</span>
             </div>
-            
-            <input type="range" id="progressBar" class="progress-bar" value="0" max="100">
-            <span id="timeDisplay" class="time-display">0:00 / 0:00</span>
-            
-            <div class="control-buttons-row">
-                <button id="repeatBtn" class="control-btn-circle" title="Режим повтора">🔁</button>
-                <button id="prevBtn" class="nav-btn-circle" title="Предыдущий трек">⏮️</button>
-                <button id="playPauseBtn" class="play-btn-circle">▶️</button>
-                <button id="nextBtn" class="nav-btn-circle" title="Следующий трек">⏭️</button>
-                <button id="shuffleBtn" class="control-btn-circle" title="Перемешать">🔀</button>
-            </div>
-            
-            <div class="volume-control">
-                <span id="volumeIcon">🔊</span>
-                <input type="range" id="volumeSlider" min="0" max="100" value="60">
-                <span id="volumePercent">60%</span>
+
+            <div class="right-controls">
+                <div class="volume-control compact-volume">
+                    <span id="volumeIcon" class="volume-icon"></span>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="60">
+                    <span id="volumePercent">60%</span>
+                </div>
+                <button id="moreActionsBtn" class="icon-btn eq-button more-btn" title="Действия с текущим треком" aria-label="Действия"></button>
+                <button id="toggleEqBtn" class="icon-btn eq-button" title="Эквалайзер" aria-label="Эквалайзер"></button>
             </div>
         </div>
 
-        <div id="playlistsGrid" class="playlists-grid"></div>
+        <section class="recent-section">
+            <h2>Недавно прослушанные</h2>
+            <ul id="recentTracksList" class="recent-tracks-list"></ul>
+        </section>
 
-        <div class="tracklist">
-            <h2>Мои треки</h2>
+        <section class="playlists-section">
+            <h2>Плейлисты</h2>
+            <div id="playlistsGrid" class="playlists-grid horizontal-playlists"></div>
+        </section>
+
+        <section class="tracklist center-tracklist">
+            <h2>Основной треклист</h2>
             <ul id="tracklist" class="tracklist-ul"></ul>
-        </div>
+        </section>
 
         <input type="file" id="coverFileInput" accept="image/*" style="display: none;">
     </div>
