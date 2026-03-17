@@ -2067,3 +2067,208 @@ body {
 .search-artist { font-size: 12px; color: #96a3bf; }
 
 .hidden { display: none !important; }
+
+/* ===== Final VK control and clean cards ===== */
+:root {
+  --vk-main-bg: #06080d;
+  --vk-accent-violet: #6d26ff;
+}
+
+body {
+  background: var(--vk-main-bg) !important;
+}
+
+.app,
+.header,
+.vk-top-player,
+.search-section,
+.search-results,
+.recent-section,
+.playlists-section,
+.center-tracklist,
+.tracklist,
+.tracklist-item,
+.recent-track-item,
+.playlist-square,
+.modal-content,
+.compact-volume,
+.track-search-input {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.header,
+.vk-top-player,
+.search-results,
+.recent-section,
+.playlists-section,
+.center-tracklist,
+.tracklist,
+.tracklist-item,
+.recent-track-item,
+.playlist-square,
+.compact-volume {
+  background: var(--vk-main-bg) !important;
+}
+
+.progress-topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.center-progress-zone .current-track-info {
+  min-width: 0;
+  text-align: left;
+}
+
+.center-progress-zone .current-track-title,
+.center-progress-zone .current-track-artist {
+  text-align: left;
+}
+
+.time-display {
+  text-align: right !important;
+  min-width: 46px;
+  margin: 0;
+  color: #aeb9d2;
+}
+
+#progressBar {
+  margin-top: 4px;
+}
+
+.left-controls {
+  gap: 12px;
+}
+
+.icon-btn {
+  border: none !important;
+  background: transparent !important;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  border-radius: 0;
+}
+
+#playPauseBtn {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  background: var(--vk-accent-violet) !important;
+}
+
+#playPauseBtn[data-state="play"]::before,
+#playPauseBtn:not([data-state])::before {
+  left: 16px;
+  top: 12px;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 12px solid #fff;
+}
+
+#playPauseBtn[data-state="pause"]::before,
+#playPauseBtn[data-state="pause"]::after {
+  top: 12px;
+  width: 4px;
+  height: 16px;
+  background: #fff;
+}
+#playPauseBtn[data-state="pause"]::before { left: 14px; }
+#playPauseBtn[data-state="pause"]::after { left: 22px; }
+
+#prevBtn::before,
+#nextBtn::before,
+#prevBtn::after,
+#nextBtn::after,
+#shuffleBtn::before,
+#shuffleBtn::after,
+#repeatBtn::before,
+#repeatBtn::after {
+  color: var(--vk-accent-violet);
+}
+
+#prevBtn::before {
+  left: 4px; top: 7px;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 8px solid var(--vk-accent-violet);
+}
+#prevBtn::after {
+  content: "";
+  left: 14px; top: 7px;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 8px solid var(--vk-accent-violet);
+}
+
+#nextBtn::before {
+  right: 4px; top: 7px;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 8px solid var(--vk-accent-violet);
+}
+#nextBtn::after {
+  content: "";
+  right: 14px; top: 7px;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 8px solid var(--vk-accent-violet);
+}
+
+#shuffleBtn::before,
+#shuffleBtn::after {
+  left: 4px;
+  width: 18px;
+  height: 2px;
+  background: var(--vk-accent-violet);
+}
+#shuffleBtn::before { top: 8px; transform: rotate(30deg); }
+#shuffleBtn::after { top: 16px; transform: rotate(-30deg); }
+
+#repeatBtn::before {
+  left: 5px;
+  top: 6px;
+  width: 14px;
+  height: 12px;
+  border: 2px solid var(--vk-accent-violet);
+  border-left-color: transparent;
+  border-radius: 3px;
+}
+#repeatBtn::after {
+  content: "";
+  right: 3px;
+  top: 6px;
+  border-left: 5px solid var(--vk-accent-violet);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+
+.recent-tracks-list {
+  grid-auto-columns: minmax(150px, 150px);
+}
+
+.recent-track-item {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 48px;
+  gap: 8px;
+}
+
+.recent-track-item .track-mini-cover {
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  display: block;
+}
+
+.recent-track-time {
+  font-size: 12px;
+  color: #aeb9d2;
+  min-width: 38px;
+  text-align: right;
+}

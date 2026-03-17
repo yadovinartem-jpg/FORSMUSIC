@@ -539,7 +539,6 @@ function updateTracklist() {
     });
 }
 
-
 function updateActiveTrackTimeInList() {
     if (currentTrackIndex < 0 || !tracklist) return;
     const durationEl = tracklist.querySelector(`.track-duration[data-index="${currentTrackIndex}"]`);
@@ -551,7 +550,17 @@ function updateActiveTrackTimeInList() {
         durationEl.textContent = formatTime((tracks[currentTrackIndex] && tracks[currentTrackIndex].duration) || 0);
     }
 }
+function updateActiveTrackTimeInRecent() {
+    if (currentTrackIndex < 0 || !recentTracksList) return;
+    const durationEl = recentTracksList.querySelector(`.recent-track-time[data-index="${currentTrackIndex}"]`);
+    if (!durationEl) return;
 
+    if (isPlaying || audio.currentTime > 0) {
+        durationEl.textContent = formatTime(audio.currentTime || 0);
+    } else {
+        durationEl.textContent = formatTime((tracks[currentTrackIndex] && tracks[currentTrackIndex].duration) || 0);
+    }
+}
 function saveRecentTracks() {
     localStorage.setItem('recent_tracks', JSON.stringify(recentTrackPaths));
 }
@@ -588,20 +597,39 @@ function updateRecentTracksList() {
 
         const li = document.createElement('li');
         li.className = 'recent-track-item';
+        let coverHtml = '';
+        if (track.albumArt) {
+            const img = document.createElement('img');
+            img.className = 'track-mini-cover';
+            img.src = track.albumArt;
+            coverHtml = img.outerHTML;
+        } else {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'track-mini-cover';
+            canvas.width = 32;
+            canvas.height = 32;
+            const miniCtx = canvas.getContext('2d');
+            const gradient = miniCtx.createLinearGradient(0, 0, 32, 32);
+            gradient.addColorStop(0, '#32007d');
+            gradient.addColorStop(1, '#000000');
+            miniCtx.fillStyle = gradient;
+            miniCtx.fillRect(0, 0, 32, 32);
+            coverHtml = canvas.outerHTML;
+        }
 
+        const durationText = index === currentTrackIndex ? formatTime(audio.currentTime || 0) : formatTime(track.duration || 0);
         li.innerHTML = `
             <div class="track-info">
                 <span class="track-title">${track.title || 'Без названия'}</span>
                 <span class="track-artist">${track.artist || ''}</span>
             </div>
+            <span class="recent-track-time" data-index="${index}">${durationText}</span>
         `;
 
         li.addEventListener('click', () => playTrack(index));
         recentTracksList.appendChild(li);
     });
 }
-
-
 function renderSearchList(listElement, items, { clickable = false } = {}) {
     if (!listElement) return;
     listElement.innerHTML = '';
@@ -914,7 +942,7 @@ async function deleteTrackByMenu({ deleteFromCloud }) {
         currentTrackIndex = -1;
         updateAlbumArt(null);
         progressBar.value = 0;
-        timeDisplay.textContent = '0:00 / 0:00';
+        timeDisplay.textContent = '0:00';
     } else if (currentTrackIndex > currentTrackForMenu) {
         currentTrackIndex--;
     }
@@ -1167,7 +1195,7 @@ function updatePlaylistTracksList() {
             miniCtx.fillRect(0, 0, 30, 30);
             miniCoverHtml = canvas.outerHTML;
         }
-        
+      
         trackDiv.innerHTML = `
             ${miniCoverHtml}
             <div class="track-info">
@@ -1686,8 +1714,9 @@ audio.addEventListener('timeupdate', () => {
     if (audio.duration && !isNaN(audio.duration) && progressBar && timeDisplay) {
         const progress = (audio.currentTime / audio.duration) * 100;
         progressBar.value = progress;
-        timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+        timeDisplay.textContent = `${formatTime(audio.currentTime)}`;
         updateActiveTrackTimeInList();
+        updateActiveTrackTimeInRecent();
     }
 });
 
@@ -1701,7 +1730,7 @@ audio.addEventListener('ended', () => {
         updatePlayPauseButton();
         currentTrackIndex = -1;
         if (progressBar) progressBar.value = 0;
-        if (timeDisplay) timeDisplay.textContent = '0:00 / 0:00';
+        if (timeDisplay) timeDisplay.textContent = '0:00';
         updateTracklist();
         updateAlbumArt(null);
     }
@@ -1709,7 +1738,13 @@ audio.addEventListener('ended', () => {
 
 audio.addEventListener('loadedmetadata', () => {
     if (timeDisplay) {
-        timeDisplay.textContent = `0:00 / ${formatTime(audio.duration)}`;
+        timeDisplay.textContent = '0:00';
+    }
+
+    if (currentTrackIndex >= 0 && tracks[currentTrackIndex]) {
+        tracks[currentTrackIndex].duration = Number(audio.duration) || 0;
+        saveTracks();
+        updateTracklist();
     }
 
     if (currentTrackIndex >= 0 && tracks[currentTrackIndex]) {
@@ -1771,7 +1806,6 @@ document.addEventListener('DOMContentLoaded', function() {
             updateTracklist();
         });
     }
-
     if (trackSortSelect) {
         trackSortSelect.value = currentTrackSort;
         trackSortSelect.addEventListener('change', (e) => {
@@ -1780,7 +1814,6 @@ document.addEventListener('DOMContentLoaded', function() {
             updateTracklist();
         });
     }
-
     if (moreActionsBtn) {
         moreActionsBtn.addEventListener('click', () => {
             if (currentTrackIndex === -1) return;
