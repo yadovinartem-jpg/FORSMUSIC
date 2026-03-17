@@ -545,9 +545,8 @@ function updateRecentTracksList() {
     });
 }
 
+// [ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ]
 
-// ========== ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ ==========
-main
 function playTrack(index) {
     if (index >= 0 && index < tracks.length) {
         audio.pause();
@@ -583,7 +582,7 @@ function playTrack(index) {
             console.error('❌ Audio error message:', audio.error ? audio.error.message : 'unknown');
             console.error('❌ Audio src:', audio.src);
             isPlaying = false;
-            if (playPauseBtn) playPauseBtn.textContent = '▶️';
+            updatePlayPauseButton();
         };
         
         audio.oncanplay = function() {
@@ -591,7 +590,7 @@ function playTrack(index) {
             audio.play().then(() => {
                 console.log('✅ Воспроизведение успешно');
                 isPlaying = true;
-                if (playPauseBtn) playPauseBtn.textContent = '⏸️';
+                updatePlayPauseButton();
                 updateTracklist();
                 updateAlbumArt(tracks[currentTrackIndex]);
                 
@@ -604,14 +603,14 @@ function playTrack(index) {
             }).catch(error => {
                 console.error('❌ Play error:', error);
                 isPlaying = false;
-                if (playPauseBtn) playPauseBtn.textContent = '▶️';
+                updatePlayPauseButton();
             });
         };
         
         audio.onplaying = function() {
             console.log('▶️ Воспроизведение началось');
             isPlaying = true;
-            if (playPauseBtn) playPauseBtn.textContent = '⏸️';
+            updatePlayPauseButton();
         };
         
         setTimeout(() => {
@@ -772,7 +771,7 @@ deleteTrackBtn.addEventListener('click', async () => {
     if (currentTrackIndex === currentTrackForMenu) {
         audio.pause();
         isPlaying = false;
-        playPauseBtn.textContent = '▶️';
+        updatePlayPauseButton();
         currentTrackIndex = -1;
         updateAlbumArt(null);
         progressBar.value = 0;
@@ -1227,20 +1226,25 @@ function togglePlay() {
     
     if (isPlaying) {
         audio.pause();
-        if (playPauseBtn) playPauseBtn.textContent = '▶️';
+        updatePlayPauseButton();
         isPlaying = false;
     } else {
         if (currentTrackIndex === -1) {
             playTrack(0);
         } else {
             audio.play().then(() => {
-                if (playPauseBtn) playPauseBtn.textContent = '⏸️';
+                updatePlayPauseButton();
                 isPlaying = true;
             }).catch(error => {
                 console.error('❌ Play error:', error);
             });
         }
     }
+}
+
+function updatePlayPauseButton() {
+    if (!playPauseBtn) return;
+    playPauseBtn.dataset.state = isPlaying ? 'pause' : 'play';
 }
 
 function playNext() {
@@ -1269,7 +1273,7 @@ function playPrev() {
 
 function updateModeButtons() {
     if (repeatBtn) {
-        repeatBtn.textContent = repeatMode === 0 ? '🔁' : repeatMode === 1 ? '🔁' : '🔂';
+        repeatBtn.dataset.mode = repeatMode === 0 ? 'off' : repeatMode === 1 ? 'all' : 'one';
         repeatBtn.classList.toggle('active', repeatMode !== 0);
     }
     
@@ -1545,7 +1549,7 @@ audio.addEventListener('ended', () => {
         playTrack(nextIndex);
     } else {
         isPlaying = false;
-        if (playPauseBtn) playPauseBtn.textContent = '▶️';
+        updatePlayPauseButton();
         currentTrackIndex = -1;
         if (progressBar) progressBar.value = 0;
         if (timeDisplay) timeDisplay.textContent = '0:00 / 0:00';
@@ -1587,10 +1591,10 @@ function initVolume() {
 
 function updateVolumeIcon(volume) {
     if (!volumeIcon) return;
-    if (volume == 0) volumeIcon.textContent = '🔇';
-    else if (volume < 30) volumeIcon.textContent = '🔈';
-    else if (volume < 70) volumeIcon.textContent = '🔉';
-    else volumeIcon.textContent = '🔊';
+    if (volume == 0) volumeIcon.dataset.level = 'mute';
+    else if (volume < 30) volumeIcon.dataset.level = 'low';
+    else if (volume < 70) volumeIcon.dataset.level = 'mid';
+    else volumeIcon.dataset.level = 'high';
 }
 
 // [ИНИЦИАЛИЗАЦИЯ]
@@ -1599,12 +1603,14 @@ document.addEventListener('DOMContentLoaded', function() {
     loadEQSettings();
     initEQSliders();
     updateModeButtons();
+    updatePlayPauseButton();
     updateAlbumArt(null);
     updateRecentTracksList();
 
     if (moreActionsBtn) {
         moreActionsBtn.addEventListener('click', () => {
-            uploadModal.classList.remove('hidden');
+            if (currentTrackIndex === -1) return;
+            openTrackMenu(currentTrackIndex);
         });
     }
     
