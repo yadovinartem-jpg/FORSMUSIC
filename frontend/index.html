@@ -15,8 +15,7 @@
             <h1>ALVAREZ</h1>
             <div class="header-actions">
                 <button id="uploadBtn" class="upload-btn-header" title="Загрузить трек" aria-label="Добавить трек">
-                    <span class="upload-note-icon"></span>
-                    <span class="upload-plus-icon"></span>
+                    <span class="upload-plus-only">+</span>
                 </button>
 
             </div>
@@ -88,7 +87,8 @@
                 
                 <div class="track-menu-actions">
                     <button id="showAddToPlaylistBtn" class="track-action-btn">📋 Добавить в плейлист</button>
-                    <button id="deleteTrackBtn" class="track-action-btn delete">🗑️ Удалить трек</button>
+                    <button id="deleteTrackLocalBtn" class="track-action-btn delete">🗑️ Удалить из треклиста</button>
+                    <button id="deleteTrackCloudBtn" class="track-action-btn delete">☁️🗑️ Удалить из облака и треклиста</button>
                 </div>
             </div>
         </div>
@@ -212,8 +212,8 @@
                     <div id="currentTrackTitle" class="current-track-title">Нет трека</div>
                     <div id="currentTrackArtist" class="current-track-artist"></div>
                 </div>
-                <input type="range" id="progressBar" class="progress-bar" value="0" max="100">
                 <span id="timeDisplay" class="time-display">0:00 / 0:00</span>
+                <input type="range" id="progressBar" class="progress-bar" value="0" max="100">
             </div>
 
             <div class="right-controls">
@@ -227,6 +227,20 @@
             </div>
         </div>
 
+        <section class="search-section">
+            <input id="trackSearchInput" class="track-search-input" type="search" placeholder="Поиск треков по названию..." aria-label="Поиск треков">
+            <div id="searchResults" class="search-results hidden">
+                <div class="search-group">
+                    <h3>В вашей библиотеке</h3>
+                    <ul id="localSearchResults" class="search-list"></ul>
+                </div>
+                <div class="search-group">
+                    <h3>Найдено</h3>
+                    <ul id="remoteSearchResults" class="search-list"></ul>
+                </div>
+            </div>
+        </section>
+
         <section class="recent-section">
             <h2>Недавно прослушанные</h2>
             <ul id="recentTracksList" class="recent-tracks-list"></ul>
@@ -238,7 +252,15 @@
         </section>
 
         <section class="tracklist center-tracklist">
-            <h2>Основной треклист</h2>
+            <div class="tracklist-header">
+                <h2>Треки</h2>
+                <select id="trackSortSelect" class="track-sort-select" aria-label="Сортировка треков">
+                    <option value="date_desc">По дате добавления</option>
+                    <option value="alpha">По алфавиту</option>
+                    <option value="artist">По исполнителю</option>
+                    <option value="year_desc">По году</option>
+                </select>
+            </div>
             <ul id="tracklist" class="tracklist-ul"></ul>
         </section>
 
