@@ -1042,3 +1042,220 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: #4a1a9e;
 }
+
+/* ===== VK-like layout override ===== */
+body {
+    background: #0f1116;
+    color: #e8edf7;
+}
+
+.app {
+    max-width: 1180px;
+    margin: 0 auto;
+}
+
+.header {
+    margin-bottom: 14px;
+}
+
+.header h1 {
+    color: #e8edf7;
+    font-size: 28px;
+}
+
+.upload-btn-header {
+    width: auto;
+    height: 40px;
+    border-radius: 999px;
+    padding: 0 16px;
+    font-size: 15px;
+    background: #2b63f6;
+}
+
+.vk-top-player {
+    display: grid;
+    grid-template-columns: auto minmax(360px, 1fr) auto;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 18px;
+    border-radius: 14px;
+    background: #1a1d25;
+    border: 1px solid #2a3040;
+    margin-bottom: 14px;
+}
+
+.left-controls,
+.right-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.center-progress-zone {
+    min-width: 0;
+}
+
+.current-track-title {
+    font-size: 16px;
+    color: #f2f6ff;
+}
+
+.current-track-artist {
+    font-size: 13px;
+    color: #aab4c7;
+}
+
+.progress-bar {
+    margin: 6px 0;
+    height: 4px;
+    background: #2b3244;
+}
+
+.time-display {
+    margin: 0;
+    text-align: left;
+    font-size: 12px;
+    color: #8f9ab3;
+}
+
+.compact-art {
+    width: 48px;
+    height: 48px;
+    margin: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: none;
+}
+
+.compact-art .album-art {
+    width: 48px;
+    height: 48px;
+    aspect-ratio: unset;
+}
+
+.compact-volume {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #11151d;
+    border: 1px solid #2a3040;
+    border-radius: 999px;
+    padding: 6px 10px;
+}
+
+#volumeSlider {
+    width: 100px;
+}
+
+.eq-button {
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
+    background: #262d3f;
+    box-shadow: none;
+}
+
+.more-btn {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.recent-section,
+.playlists-section,
+.center-tracklist {
+    background: #171a22;
+    border: 1px solid #2a3040;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 14px;
+}
+
+.recent-section h2,
+.playlists-section h2,
+.center-tracklist h2 {
+    color: #eef3ff;
+    margin-bottom: 10px;
+    font-size: 18px;
+}
+
+.recent-tracks-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    list-style: none;
+}
+
+.recent-track-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 10px;
+    background: #10141c;
+    border: 1px solid #2a3040;
+    cursor: pointer;
+}
+
+.recent-track-item .track-mini-cover {
+    width: 46px;
+    height: 46px;
+    border-radius: 8px;
+}
+
+.horizontal-playlists {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+.playlist-square {
+    min-width: 180px;
+    max-width: 180px;
+    padding: 12px;
+    background: #10141c;
+    border: 1px solid #2a3040;
+    border-radius: 12px;
+}
+
+.playlist-square-cover {
+    width: 100%;
+    height: 140px;
+    border-radius: 10px;
+    object-fit: cover;
+    margin-bottom: 8px;
+}
+
+.tracklist {
+    margin-bottom: 14px;
+}
+
+.tracklist-ul {
+    max-height: none;
+    overflow: visible;
+}
+
+.tracklist-item {
+    background: #10141c;
+    border: 1px solid #2a3040;
+    border-radius: 12px;
+    margin-bottom: 8px;
+}
+
+@media (max-width: 900px) {
+    .vk-top-player {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .left-controls,
+    .right-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .time-display {
+        text-align: center;
+    }
+}

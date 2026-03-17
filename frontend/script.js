@@ -41,6 +41,7 @@ const closeEqModalBtn = document.getElementById('closeEqModalBtn');
 
 const playlistsGrid = document.getElementById('playlistsGrid');
 const tracklist = document.getElementById('tracklist');
+const recentTracksList = document.getElementById('recentTracksList');
 
 const playPauseBtn = document.getElementById('playPauseBtn');
 const prevBtn = document.getElementById('prevBtn');
@@ -62,6 +63,7 @@ const qValue = document.getElementById('qValue');
 const applyMyPresetBtn = document.getElementById('applyMyPresetBtn');
 const resetEqBtn = document.getElementById('resetEqBtn');
 const saveEqBtn = document.getElementById('saveEqBtn');
+const moreActionsBtn = document.getElementById('moreActionsBtn');
 
 // Аудио элемент с правильным crossorigin
 const audio = new Audio();
@@ -78,6 +80,7 @@ let currentTrackForMenu = null;
 let repeatMode = 0;
 let shuffleMode = false;
 let shuffledIndices = [];
+let recentTrackPaths = JSON.parse(localStorage.getItem('recent_tracks')) || [];
 
 // ========== СОХРАНЕНИЕ И ЗАГРУЗКА ТРЕКОВ ==========
 function saveTracks() {
@@ -472,12 +475,83 @@ function updateTracklist() {
     });
 }
 
+function saveRecentTracks() {
+    localStorage.setItem('recent_tracks', JSON.stringify(recentTrackPaths));
+}
+
+function addTrackToRecent(track) {
+    if (!track || !track.path) return;
+    recentTrackPaths = recentTrackPaths.filter(path => path !== track.path);
+    recentTrackPaths.unshift(track.path);
+    recentTrackPaths = recentTrackPaths.slice(0, 30);
+    saveRecentTracks();
+    updateRecentTracksList();
+}
+
+function updateRecentTracksList() {
+    if (!recentTracksList) return;
+    recentTracksList.innerHTML = '';
+
+    const recentTracks = recentTrackPaths
+        .map(path => tracks.find(track => track.path === path))
+        .filter(Boolean);
+
+    if (recentTracks.length === 0) {
+        const li = document.createElement('li');
+        li.textContent = 'Пока нет недавно прослушанных треков';
+        li.style.color = '#8f9ab3';
+        li.style.padding = '12px 0';
+        recentTracksList.appendChild(li);
+        return;
+    }
+
+    recentTracks.forEach((track) => {
+        const index = tracks.findIndex(t => t.path === track.path);
+        if (index === -1) return;
+
+        const li = document.createElement('li');
+        li.className = 'recent-track-item';
+
+        let coverHtml = '';
+        if (track.albumArt) {
+            const img = document.createElement('img');
+            img.className = 'track-mini-cover';
+            img.src = track.albumArt;
+            coverHtml = img.outerHTML;
+        } else {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'track-mini-cover';
+            canvas.width = 46;
+            canvas.height = 46;
+            const miniCtx = canvas.getContext('2d');
+            const gradient = miniCtx.createLinearGradient(0, 0, 46, 46);
+            gradient.addColorStop(0, '#32007d');
+            gradient.addColorStop(1, '#000000');
+            miniCtx.fillStyle = gradient;
+            miniCtx.fillRect(0, 0, 46, 46);
+            coverHtml = canvas.outerHTML;
+        }
+
+        li.innerHTML = `
+            ${coverHtml}
+            <div class="track-info">
+                <span class="track-title">${track.title || 'Без названия'}</span>
+                <span class="track-artist">${track.artist || ''}</span>
+            </div>
+        `;
+
+        li.addEventListener('click', () => playTrack(index));
+        recentTracksList.appendChild(li);
+    });
+}
+
 // ========== ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ ==========
 function playTrack(index) {
     if (index >= 0 && index < tracks.length) {
         audio.pause();
         
         currentTrackIndex = index;
+        addTrackToRecent(tracks[index]);
         
         if (!tracks[index].path) {
             console.error('❌ У трека нет path:', tracks[index]);
@@ -1524,6 +1598,13 @@ document.addEventListener('DOMContentLoaded', function() {
     initEQSliders();
     updateModeButtons();
     updateAlbumArt(null);
+    updateRecentTracksList();
+
+    if (moreActionsBtn) {
+        moreActionsBtn.addEventListener('click', () => {
+            uploadModal.classList.remove('hidden');
+        });
+    }
     
     tg.ready();
 });

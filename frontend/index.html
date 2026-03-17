@@ -12,9 +12,9 @@
     <div class="app">
         <!-- Шапка с загрузкой -->
         <div class="header">
-            <h1>FOR<span class="sity">SITY</span> MUSIC</h1>
+            <h1>Музыка <span class="sity">Forsity</span></h1>
             <div class="header-actions">
-                <button id="uploadBtn" class="upload-btn-header" title="Загрузить трек">⬆️</button>
+                <button id="uploadBtn" class="upload-btn-header" title="Загрузить трек">+ Добавить</button>
             </div>
         </div>
 
@@ -188,44 +188,53 @@
             </div>
         </div>
 
-        <!-- Главный блок плеера -->
-        <div class="player-main-block">
-            <div class="album-art-container">
-                <canvas id="albumArt" class="album-art" width="300" height="300"></canvas>
+        <!-- Верхняя длинная панель плеера (как в VK-подобной компоновке) -->
+        <div class="player-main-block vk-top-player">
+            <div class="left-controls">
+                <button id="repeatBtn" class="control-btn-circle" title="Режим повтора">🔁</button>
+                <button id="prevBtn" class="nav-btn-circle" title="Предыдущий трек">⏮️</button>
+                <button id="playPauseBtn" class="play-btn-circle" title="Пуск / Пауза">▶️</button>
+                <button id="nextBtn" class="nav-btn-circle" title="Следующий трек">⏭️</button>
+                <button id="shuffleBtn" class="control-btn-circle" title="Перемешать">🔀</button>
             </div>
-            
-            <div class="track-info-row">
+
+            <div class="center-progress-zone">
                 <div class="current-track-info">
                     <div id="currentTrackTitle" class="current-track-title">Нет трека</div>
                     <div id="currentTrackArtist" class="current-track-artist"></div>
                 </div>
+                <input type="range" id="progressBar" class="progress-bar" value="0" max="100">
+                <span id="timeDisplay" class="time-display">0:00 / 0:00</span>
+            </div>
+
+            <div class="right-controls">
+                <div class="album-art-container compact-art">
+                    <canvas id="albumArt" class="album-art" width="64" height="64"></canvas>
+                </div>
+                <div class="volume-control compact-volume">
+                    <span id="volumeIcon">🔊</span>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="60">
+                    <span id="volumePercent">60%</span>
+                </div>
                 <button id="toggleEqBtn" class="eq-button" title="Эквалайзер">🎚️</button>
-            </div>
-            
-            <input type="range" id="progressBar" class="progress-bar" value="0" max="100">
-            <span id="timeDisplay" class="time-display">0:00 / 0:00</span>
-            
-            <div class="control-buttons-row">
-                <button id="repeatBtn" class="control-btn-circle" title="Режим повтора">🔁</button>
-                <button id="prevBtn" class="nav-btn-circle" title="Предыдущий трек">⏮️</button>
-                <button id="playPauseBtn" class="play-btn-circle">▶️</button>
-                <button id="nextBtn" class="nav-btn-circle" title="Следующий трек">⏭️</button>
-                <button id="shuffleBtn" class="control-btn-circle" title="Перемешать">🔀</button>
-            </div>
-            
-            <div class="volume-control">
-                <span id="volumeIcon">🔊</span>
-                <input type="range" id="volumeSlider" min="0" max="100" value="60">
-                <span id="volumePercent">60%</span>
+                <button id="moreActionsBtn" class="eq-button more-btn" title="Управление">⋯</button>
             </div>
         </div>
 
-        <div id="playlistsGrid" class="playlists-grid"></div>
+        <section class="recent-section">
+            <h2>Недавно прослушанные</h2>
+            <ul id="recentTracksList" class="recent-tracks-list"></ul>
+        </section>
 
-        <div class="tracklist">
-            <h2>Мои треки</h2>
+        <section class="playlists-section">
+            <h2>Плейлисты</h2>
+            <div id="playlistsGrid" class="playlists-grid horizontal-playlists"></div>
+        </section>
+
+        <section class="tracklist center-tracklist">
+            <h2>Основной треклист</h2>
             <ul id="tracklist" class="tracklist-ul"></ul>
-        </div>
+        </section>
 
         <input type="file" id="coverFileInput" accept="image/*" style="display: none;">
     </div>
