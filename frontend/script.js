@@ -1,6 +1,8 @@
-// Инициализация Telegram Web App
-const tg = window.Telegram.WebApp;
-tg.expand();
+// Инициализация Telegram Web App (с безопасным fallback для обычного браузера)
+const tg = window.Telegram?.WebApp;
+if (tg) {
+    tg.expand();
+}
 
 // Адрес бэкенд-сервера (ваш Codespace URL)
 const API_URL = 'https://stunning-enigma-7vj6wv7x996vhx5px-3000.app.github.dev/api';
@@ -1614,7 +1616,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    tg.ready();
+    if (tg) {
+        tg.ready();
+    }
 });
 
 // Очистка временных ссылок при закрытии
