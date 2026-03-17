@@ -1206,6 +1206,7 @@ input[type="search"],
 }
 codex/create-music-player-design-similar-to-vk-tqsjbg
 
+main
 /* ===== VK-like layout override ===== */
 body {
     background: #0f1116;
@@ -1422,4 +1423,6 @@ body {
         text-align: center;
     }
 }
+
+main
 main
