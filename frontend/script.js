@@ -546,6 +546,7 @@ function updateRecentTracksList() {
 }
 
 // [ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ]
+
 function playTrack(index) {
     if (index >= 0 && index < tracks.length) {
         audio.pause();

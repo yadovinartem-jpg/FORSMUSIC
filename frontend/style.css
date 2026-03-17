@@ -1043,6 +1043,168 @@ body {
     background: #4a1a9e;
 }
 
+/* ===== VK Music inspired refresh ===== */
+:root {
+  --vk-bg: #12161e;
+  --vk-surface: #1b212d;
+  --vk-surface-soft: #222a39;
+  --vk-text: #f1f3f7;
+  --vk-subtext: #9ca7bd;
+  --vk-accent: #4f8cff;
+  --vk-accent-2: #2d6ff0;
+  --vk-border: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  background: radial-gradient(100% 120% at 20% 0%, #1a2333 0%, var(--vk-bg) 55%);
+  color: var(--vk-text);
+  padding: 12px;
+}
+
+.app {
+  max-width: 920px;
+}
+
+.header {
+  background: rgba(24, 31, 43, 0.75);
+  border: 1px solid var(--vk-border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  backdrop-filter: blur(8px);
+}
+
+.header h1 {
+  color: var(--vk-text);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.sity { color: var(--vk-accent); }
+
+.upload-btn-header {
+  width: auto;
+  height: 38px;
+  border-radius: 999px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--vk-accent), var(--vk-accent-2));
+}
+
+.player-main-block,
+.playlists-grid,
+.tracklist {
+  background: var(--vk-surface);
+  border: 1px solid var(--vk-border);
+  box-shadow: none;
+}
+
+.player-main-block {
+  border-radius: 20px;
+  padding: 18px;
+}
+
+.album-art-container {
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.track-info-row {
+  margin-top: 14px;
+  margin-bottom: 16px;
+}
+
+.current-track-title {
+  color: var(--vk-text);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.current-track-artist,
+.time-display,
+#volumePercent {
+  color: var(--vk-subtext);
+}
+
+.eq-button,
+.play-btn-circle,
+.control-btn-circle,
+.nav-btn-circle {
+  background: var(--vk-surface-soft);
+  border: 1px solid var(--vk-border);
+  box-shadow: none;
+}
+
+.play-btn-circle {
+  background: linear-gradient(140deg, var(--vk-accent), var(--vk-accent-2));
+}
+
+.progress-bar {
+  background: linear-gradient(to right, var(--vk-accent), #76a6ff);
+}
+
+.playlists-grid,
+.tracklist {
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.tracklist h2 {
+  color: var(--vk-text);
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.tracklist-item,
+.playlist-track-item,
+.pending-track-item,
+.playlist-choice-item,
+.playlist-square {
+  background: var(--vk-surface-soft);
+  border: 1px solid var(--vk-border);
+}
+
+.tracklist-item.active {
+  border-color: rgba(79, 140, 255, 0.7);
+  box-shadow: 0 0 0 1px rgba(79, 140, 255, 0.4) inset;
+}
+
+.track-title,
+.playlist-square-name,
+.playlist-item-name {
+  color: var(--vk-text);
+}
+
+.track-artist,
+.playlist-square-desc,
+.playlist-item-desc {
+  color: var(--vk-subtext);
+}
+
+.modal-content {
+  background: #1b212d;
+  color: var(--vk-text);
+  border: 1px solid var(--vk-border);
+}
+
+input[type="text"],
+input[type="search"],
+.pending-track-edit input,
+.playlist-form input {
+  background: #222a39;
+  border-color: var(--vk-border);
+  color: var(--vk-text);
+}
+
+@media (min-width: 860px) {
+  .content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+}
+
 /* ===== VK-like layout override ===== */
 body {
     background: #0f1116;
@@ -1260,7 +1422,6 @@ body {
     }
 }
 
-/* ===== Final top-bar and control cleanup ===== */
 .header {
   position: relative;
   display: flex;
