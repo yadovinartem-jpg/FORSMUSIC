@@ -1503,6 +1503,11 @@ body {
   cursor: pointer;
 }
 
+.icon-btn.active {
+  background: #2b63f6;
+  border-color: #3a7bff;
+}
+
 .icon-btn::before,
 .icon-btn::after { content: ""; position: absolute; }
 
@@ -1591,11 +1596,57 @@ body {
 #volumePercent { font-size: 11px; min-width: 30px; text-align: right; }
 
 .volume-icon {
+  position: relative;
   width: 12px;
   height: 12px;
   border-left: 6px solid #dbe4f8;
   border-top: 4px solid transparent;
   border-bottom: 4px solid transparent;
+}
+
+.volume-icon::before,
+.volume-icon::after {
+  content: "";
+  position: absolute;
+  right: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 1.8px solid #dbe4f8;
+  border-left-color: transparent;
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.volume-icon::before {
+  width: 6px;
+  height: 8px;
+}
+
+.volume-icon::after {
+  width: 10px;
+  height: 12px;
+  right: -11px;
+}
+
+.volume-icon[data-level="low"]::before,
+.volume-icon[data-level="mid"]::before,
+.volume-icon[data-level="high"]::before {
+  opacity: 1;
+}
+
+.volume-icon[data-level="high"]::after {
+  opacity: 1;
+}
+
+.volume-icon[data-level="mute"] {
+  opacity: 0.65;
+}
+
+.volume-icon[data-level="mute"]::before,
+.volume-icon[data-level="mute"]::after {
+  opacity: 0;
 }
 
 .recent-tracks-list {
