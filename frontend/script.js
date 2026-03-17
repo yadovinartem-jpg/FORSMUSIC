@@ -443,6 +443,7 @@ function getSortedTrackEntries() {
 
         switch (currentTrackSort) {
             case 'alpha':
+            case 'title':
                 return av.title.localeCompare(bv.title, 'ru');
             case 'artist':
                 return av.artist.localeCompare(bv.artist, 'ru') || av.title.localeCompare(bv.title, 'ru');
@@ -538,7 +539,6 @@ function updateTracklist() {
     });
 }
 
-
 function updateActiveTrackTimeInList() {
     if (currentTrackIndex < 0 || !tracklist) return;
     const durationEl = tracklist.querySelector(`.track-duration[data-index="${currentTrackIndex}"]`);
@@ -550,7 +550,6 @@ function updateActiveTrackTimeInList() {
         durationEl.textContent = formatTime((tracks[currentTrackIndex] && tracks[currentTrackIndex].duration) || 0);
     }
 }
-
 function updateActiveTrackTimeInRecent() {
     if (currentTrackIndex < 0 || !recentTracksList) return;
     const durationEl = recentTracksList.querySelector(`.recent-track-time[data-index="${currentTrackIndex}"]`);
@@ -562,7 +561,6 @@ function updateActiveTrackTimeInRecent() {
         durationEl.textContent = formatTime((tracks[currentTrackIndex] && tracks[currentTrackIndex].duration) || 0);
     }
 }
-
 function saveRecentTracks() {
     localStorage.setItem('recent_tracks', JSON.stringify(recentTrackPaths));
 }
@@ -599,7 +597,6 @@ function updateRecentTracksList() {
 
         const li = document.createElement('li');
         li.className = 'recent-track-item';
-
         let coverHtml = '';
         if (track.albumArt) {
             const img = document.createElement('img');
@@ -621,9 +618,7 @@ function updateRecentTracksList() {
         }
 
         const durationText = index === currentTrackIndex ? formatTime(audio.currentTime || 0) : formatTime(track.duration || 0);
-
         li.innerHTML = `
-            ${coverHtml}
             <div class="track-info">
                 <span class="track-title">${track.title || 'Без названия'}</span>
                 <span class="track-artist">${track.artist || ''}</span>
@@ -635,7 +630,6 @@ function updateRecentTracksList() {
         recentTracksList.appendChild(li);
     });
 }
-
 function renderSearchList(listElement, items, { clickable = false } = {}) {
     if (!listElement) return;
     listElement.innerHTML = '';
@@ -1201,7 +1195,7 @@ function updatePlaylistTracksList() {
             miniCtx.fillRect(0, 0, 30, 30);
             miniCoverHtml = canvas.outerHTML;
         }
-        
+      
         trackDiv.innerHTML = `
             ${miniCoverHtml}
             <div class="track-info">
@@ -1752,6 +1746,12 @@ audio.addEventListener('loadedmetadata', () => {
         saveTracks();
         updateTracklist();
     }
+
+    if (currentTrackIndex >= 0 && tracks[currentTrackIndex]) {
+        tracks[currentTrackIndex].duration = Number(audio.duration) || 0;
+        saveTracks();
+        updateTracklist();
+    }
 });
 
 // [ГРОМКОСТЬ]
@@ -1806,7 +1806,14 @@ document.addEventListener('DOMContentLoaded', function() {
             updateTracklist();
         });
     }
-
+    if (trackSortSelect) {
+        trackSortSelect.value = currentTrackSort;
+        trackSortSelect.addEventListener('change', (e) => {
+            currentTrackSort = e.target.value;
+            localStorage.setItem('track_sort', currentTrackSort);
+            updateTracklist();
+        });
+    }
     if (moreActionsBtn) {
         moreActionsBtn.addEventListener('click', () => {
             if (currentTrackIndex === -1) return;
