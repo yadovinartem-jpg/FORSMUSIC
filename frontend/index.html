@@ -12,9 +12,9 @@
     <div class="app">
         <!-- Шапка с загрузкой -->
         <div class="header">
-            <h1>FOR<span class="sity">SITY</span> MUSIC</h1>
+            <h1>Музыка <span class="sity">Forsity</span></h1>
             <div class="header-actions">
-                <button id="uploadBtn" class="upload-btn-header" title="Загрузить трек">⬆️</button>
+                <button id="uploadBtn" class="upload-btn-header" title="Загрузить трек">+ Добавить</button>
             </div>
         </div>
 
@@ -220,11 +220,13 @@
             </div>
         </div>
 
-        <div id="playlistsGrid" class="playlists-grid"></div>
+        <div class="content-grid">
+            <div id="playlistsGrid" class="playlists-grid"></div>
 
-        <div class="tracklist">
-            <h2>Мои треки</h2>
-            <ul id="tracklist" class="tracklist-ul"></ul>
+            <div class="tracklist">
+                <h2>Треки</h2>
+                <ul id="tracklist" class="tracklist-ul"></ul>
+            </div>
         </div>
 
         <input type="file" id="coverFileInput" accept="image/*" style="display: none;">
