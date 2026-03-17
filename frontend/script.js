@@ -5,7 +5,7 @@ tg.expand();
 // Адрес бэкенд-сервера (ваш Codespace URL)
 const API_URL = 'https://stunning-enigma-7vj6wv7x996vhx5px-3000.app.github.dev/api';
 
-// ========== ЭЛЕМЕНТЫ ==========
+// --- SECTION ---
 const uploadBtn = document.getElementById('uploadBtn');
 const uploadModal = document.getElementById('uploadModal');
 const closeUploadModalBtn = document.getElementById('closeUploadModalBtn');
@@ -69,7 +69,7 @@ const moreActionsBtn = document.getElementById('moreActionsBtn');
 const audio = new Audio();
 audio.crossOrigin = 'anonymous'; // Критически важно для CORS и эквалайзера
 
-// ========== ДАННЫЕ ==========
+// --- SECTION ---
 let isPlaying = false;
 let currentTrackIndex = -1;
 let tracks = [];
@@ -82,7 +82,7 @@ let shuffleMode = false;
 let shuffledIndices = [];
 let recentTrackPaths = JSON.parse(localStorage.getItem('recent_tracks')) || [];
 
-// ========== СОХРАНЕНИЕ И ЗАГРУЗКА ТРЕКОВ ==========
+// --- SECTION ---
 function saveTracks() {
     try {
         const tracksToSave = tracks.map(track => ({
@@ -119,10 +119,10 @@ function loadTracks() {
 // Загружаем треки при старте
 loadTracks();
 
-// ========== ИНИЦИАЛИЗАЦИЯ ==========
+// --- SECTION ---
 updatePlaylistsGrid();
 
-// ========== ФУНКЦИИ ДЛЯ РИСОВАНИЯ ==========
+// --- SECTION ---
 function drawGradientAlbumArt(canvas) {
     if (!canvas || !canvas.getContext) return;
     const ctx = canvas.getContext('2d');
@@ -145,7 +145,7 @@ function drawImageAlbumArt(canvas, img) {
 if (albumArt) drawGradientAlbumArt(albumArt);
 if (playlistCoverEdit) drawGradientAlbumArt(playlistCoverEdit);
 
-// ========== ФУНКЦИИ ДЛЯ РАБОТЫ С MP3 ==========
+// --- SECTION ---
 function loadJsMediaTags() {
     return new Promise((resolve, reject) => {
         if (window.jsmediatags) {
@@ -210,7 +210,7 @@ async function extractMetadata(file) {
     }
 }
 
-// ========== ЗАГРУЗКА ТРЕКОВ ==========
+// --- SECTION ---
 uploadBtn.addEventListener('click', () => {
     uploadModal.classList.remove('hidden');
     fileInput.value = '';
@@ -341,7 +341,7 @@ function hideLoading() {
     if (loader) loader.remove();
 }
 
-// ========== ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ ==========
+// --- SECTION ---
 confirmUploadBtn.addEventListener('click', async () => {
     showLoading('Загрузка и сжатие треков...');
     
@@ -396,7 +396,7 @@ confirmUploadBtn.addEventListener('click', async () => {
     console.log('✅ Загружено треков:', uploadedCount);
 });
 
-// ========== ТРЕКЛИСТ ==========
+// --- SECTION ---
 function updateTracklist() {
     if (!tracklist) return;
     
@@ -545,7 +545,7 @@ function updateRecentTracksList() {
     });
 }
 
-// ========== ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ ==========
+// --- SECTION ---
 function playTrack(index) {
     if (index >= 0 && index < tracks.length) {
         audio.pause();
@@ -622,7 +622,7 @@ function playTrack(index) {
     }
 }
 
-// ========== ПРОВЕРКА ФАЙЛА ПЕРЕД ВОСПРОИЗВЕДЕНИЕМ ==========
+// --- SECTION ---
 async function checkTrackBeforePlay(index) {
     if (!tracks[index] || !tracks[index].path) return false;
     
@@ -643,7 +643,7 @@ async function checkTrackBeforePlay(index) {
     }
 }
 
-// ========== МЕНЮ ТРЕКА ==========
+// --- SECTION ---
 function openTrackMenu(trackIndex) {
     currentTrackForMenu = trackIndex;
     trackMenu.classList.remove('hidden');
@@ -659,7 +659,7 @@ trackMenu.addEventListener('click', (e) => {
     }
 });
 
-// ========== ДОБАВЛЕНИЕ В ПЛЕЙЛИСТ ==========
+// --- SECTION ---
 showAddToPlaylistBtn.addEventListener('click', () => {
     trackMenu.classList.add('hidden');
     updatePlaylistChoiceList();
@@ -742,7 +742,7 @@ function addTrackToPlaylist(playlistId) {
     playlistChoiceMenu.classList.add('hidden');
 }
 
-// ========== УДАЛЕНИЕ ТРЕКА ==========
+// --- SECTION ---
 deleteTrackBtn.addEventListener('click', async () => {
     if (currentTrackForMenu === null) return;
     
@@ -785,7 +785,7 @@ deleteTrackBtn.addEventListener('click', async () => {
     currentTrackForMenu = null;
 });
 
-// ========== ПЛЕЙЛИСТЫ ==========
+// --- SECTION ---
 function updatePlaylistsGrid() {
     playlistsGrid.innerHTML = '';
     
@@ -1115,7 +1115,7 @@ if (playlistSearchInput) {
     playlistSearchInput.addEventListener('input', updateAvailableTracksList);
 }
 
-// ========== ОБЛОЖКА ПЛЕЙЛИСТА ==========
+// --- SECTION ---
 changePlaylistCoverBtn.addEventListener('click', () => {
     coverFileInput.click();
 });
@@ -1145,7 +1145,7 @@ coverFileInput.addEventListener('change', (e) => {
     reader.readAsDataURL(file);
 });
 
-// ========== ФУНКЦИИ ПЛЕЕРА ==========
+// --- SECTION ---
 function updateAlbumArt(track) {
     if (!albumArt) return;
     
@@ -1289,7 +1289,7 @@ shuffleBtn.addEventListener('click', () => {
     updateModeButtons();
 });
 
-// ========== ЭКВАЛАЙЗЕР ==========
+// --- SECTION ---
 let audioContext = null;
 let source = null;
 let filters = [];
@@ -1492,7 +1492,7 @@ function initEQSliders() {
     }
 }
 
-// ========== УПРАВЛЕНИЕ ЭКВАЛАЙЗЕРОМ ==========
+// --- SECTION ---
 toggleEqBtn.addEventListener('click', () => {
     eqModal.classList.remove('hidden');
 });
@@ -1517,7 +1517,7 @@ saveEqBtn.addEventListener('click', () => {
     localStorage.setItem('eqSettings', JSON.stringify(eqSettings));
 });
 
-// ========== СОБЫТИЯ ПЛЕЕРА ==========
+// --- SECTION ---
 playPauseBtn.addEventListener('click', togglePlay);
 prevBtn.addEventListener('click', playPrev);
 nextBtn.addEventListener('click', playNext);
@@ -1558,7 +1558,7 @@ audio.addEventListener('loadedmetadata', () => {
     }
 });
 
-// ========== ГРОМКОСТЬ ==========
+// --- SECTION ---
 function initVolume() {
     if (!volumeSlider || !volumePercent || !volumeIcon) return;
     
@@ -1591,7 +1591,7 @@ function updateVolumeIcon(volume) {
     else volumeIcon.textContent = '🔊';
 }
 
-// ========== ИНИЦИАЛИЗАЦИЯ ==========
+// --- SECTION ---
 document.addEventListener('DOMContentLoaded', function() {
     initVolume();
     loadEQSettings();
