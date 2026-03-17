@@ -91,6 +91,7 @@ let shuffledIndices = [];
 let recentTrackPaths = JSON.parse(localStorage.getItem('recent_tracks')) || [];
 let currentTrackSort = localStorage.getItem('track_sort') || 'date_desc';
 let trackSearchTimer = null;
+let draftPlaylistTracks = [];
 
 // [СОХРАНЕНИЕ И ЗАГРУЗКА ТРЕКОВ]
 function saveTracks() {
@@ -538,7 +539,6 @@ function updateTracklist() {
         tracklist.appendChild(li);
     });
 }
-
 function updateActiveTrackTimeInList() {
     if (currentTrackIndex < 0 || !tracklist) return;
     const durationEl = tracklist.querySelector(`.track-duration[data-index="${currentTrackIndex}"]`);
@@ -630,6 +630,85 @@ function updateRecentTracksList() {
         recentTracksList.appendChild(li);
     });
 }
+function renderSearchList(listElement, items, { clickable = false } = {}) {
+    if (!listElement) return;
+    listElement.innerHTML = '';
+
+    if (!items || items.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'search-item empty';
+        li.textContent = 'Ничего не найдено';
+        listElement.appendChild(li);
+        return;
+    }
+
+    items.forEach((item) => {
+        const li = document.createElement('li');
+        li.className = 'search-item';
+        li.innerHTML = `
+            <span class="search-title">${item.title || 'Без названия'}</span>
+            <span class="search-artist">${item.artist || ''}</span>
+        `;
+
+        if (clickable && Number.isInteger(item.index)) {
+            li.addEventListener('click', () => playTrack(item.index));
+        }
+
+        listElement.appendChild(li);
+    });
+}
+
+async function fetchRemoteTracksByTitle(query) {
+    try {
+        const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=20`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return (data.results || []).map((item) => ({
+            title: item.trackName || 'Без названия',
+            artist: item.artistName || ''
+        }));
+    } catch (e) {
+        return [];
+    }
+}
+
+async function handleTrackSearch() {
+    if (!trackSearchInput || !searchResults) return;
+
+    const query = trackSearchInput.value.trim().toLowerCase();
+
+    if (!query) {
+        searchResults.classList.add('hidden');
+        if (localSearchResults) localSearchResults.innerHTML = '';
+        if (remoteSearchResults) remoteSearchResults.innerHTML = '';
+        return;
+    }
+
+    const localMatches = tracks
+        .map((track, index) => ({ ...track, index }))
+        .filter((track) => (track.title || '').toLowerCase().includes(query));
+
+    const remoteMatchesRaw = await fetchRemoteTracksByTitle(query);
+    const localKey = new Set(localMatches.map((t) => `${(t.title || '').toLowerCase()}::${(t.artist || '').toLowerCase()}`));
+    const remoteMatches = remoteMatchesRaw.filter((t) => !localKey.has(`${(t.title || '').toLowerCase()}::${(t.artist || '').toLowerCase()}`));
+
+    renderSearchList(localSearchResults, localMatches, { clickable: true });
+    renderSearchList(remoteSearchResults, remoteMatches);
+
+    searchResults.classList.remove('hidden');
+}
+
+function initTrackSearch() {
+    if (!trackSearchInput) return;
+
+    trackSearchInput.addEventListener('input', () => {
+        clearTimeout(trackSearchTimer);
+        trackSearchTimer = setTimeout(() => {
+            handleTrackSearch();
+        }, 250);
+    });
+}
+
 function renderSearchList(listElement, items, { clickable = false } = {}) {
     if (!listElement) return;
     listElement.innerHTML = '';
@@ -1051,6 +1130,7 @@ function openPlaylistEditor(playlistId = null) {
         playlistModalTitle.textContent = 'Создать плейлист';
         playlistNameInput.value = '';
         playlistDescInput.value = '';
+        draftPlaylistTracks = [];
         drawGradientAlbumArt(playlistCoverEdit);
         deletePlaylistBtn.classList.add('hidden');
     }
@@ -1122,14 +1202,12 @@ function updateAvailableTracksList() {
         
         const addBtn = trackDiv.querySelector('.add-to-playlist');
         
-        if (currentPlaylistId) {
-            const playlist = playlists.find(p => p.id === currentPlaylistId);
-            if (playlist) {
-                const isInPlaylist = playlist.tracks.some(t => t.path === track.path);
-                if (isInPlaylist) {
-                    addBtn.style.display = 'none';
-                }
-            }
+        const isInPlaylist = currentPlaylistId
+            ? ((playlists.find(p => p.id === currentPlaylistId)?.tracks || []).some(t => t.path === track.path))
+            : draftPlaylistTracks.some(t => t.path === track.path);
+
+        if (isInPlaylist) {
+            addBtn.style.display = 'none';
         }
         
         addBtn.addEventListener('click', (e) => {
@@ -1149,17 +1227,13 @@ function updateAvailableTracksList() {
 }
 
 function updatePlaylistTracksList() {
-    if (!currentPlaylistId) {
-        playlistTracksList.innerHTML = '';
-        return;
-    }
-    
-    const playlist = playlists.find(p => p.id === currentPlaylistId);
-    if (!playlist) return;
-    
+    const playlistTracks = currentPlaylistId
+        ? (playlists.find(p => p.id === currentPlaylistId)?.tracks || [])
+        : draftPlaylistTracks;
+
     playlistTracksList.innerHTML = '';
-    
-    playlist.tracks.forEach((track, index) => {
+
+    playlistTracks.forEach((track, index) => {
         const trackDiv = document.createElement('div');
         trackDiv.className = 'playlist-track-item';
         
@@ -1223,31 +1297,39 @@ function updatePlaylistTracksList() {
 }
 
 function addTrackToCurrentPlaylist(track) {
-    if (!currentPlaylistId) return;
-    
-    const playlist = playlists.find(p => p.id === currentPlaylistId);
-    if (!playlist) return;
-    
-    if (!playlist.tracks.some(t => t.path === track.path)) {
-        playlist.tracks.push({...track});
-        localStorage.setItem('playlists', JSON.stringify(playlists));
-        updateAvailableTracksList();
-        updatePlaylistTracksList();
-        updatePlaylistsGrid();
+    if (currentPlaylistId) {
+        const playlist = playlists.find(p => p.id === currentPlaylistId);
+        if (!playlist) return;
+
+        if (!playlist.tracks.some(t => t.path === track.path)) {
+            playlist.tracks.push({...track});
+            localStorage.setItem('playlists', JSON.stringify(playlists));
+            updatePlaylistsGrid();
+        }
+    } else {
+        if (!draftPlaylistTracks.some(t => t.path === track.path)) {
+            draftPlaylistTracks.push({ ...track });
+        }
     }
+
+    updateAvailableTracksList();
+    updatePlaylistTracksList();
 }
 
 function removeTrackFromCurrentPlaylist(trackIndex) {
-    if (!currentPlaylistId) return;
-    
-    const playlist = playlists.find(p => p.id === currentPlaylistId);
-    if (!playlist) return;
-    
-    playlist.tracks.splice(trackIndex, 1);
-    localStorage.setItem('playlists', JSON.stringify(playlists));
+    if (currentPlaylistId) {
+        const playlist = playlists.find(p => p.id === currentPlaylistId);
+        if (!playlist) return;
+
+        playlist.tracks.splice(trackIndex, 1);
+        localStorage.setItem('playlists', JSON.stringify(playlists));
+        updatePlaylistsGrid();
+    } else {
+        draftPlaylistTracks.splice(trackIndex, 1);
+    }
+
     updateAvailableTracksList();
     updatePlaylistTracksList();
-    updatePlaylistsGrid();
 }
 
 savePlaylistBtn.addEventListener('click', () => {
@@ -1267,7 +1349,7 @@ savePlaylistBtn.addEventListener('click', () => {
             id: Date.now().toString(),
             name: name,
             desc: desc,
-            tracks: [],
+            tracks: draftPlaylistTracks,
             cover: null,
             createdAt: new Date().toISOString()
         };
@@ -1708,12 +1790,14 @@ progressBar.addEventListener('input', () => {
     if (audio.duration && !isNaN(audio.duration)) {
         audio.currentTime = (progressBar.value / 100) * audio.duration;
     }
+    refreshProgressFill();
 });
 
 audio.addEventListener('timeupdate', () => {
     if (audio.duration && !isNaN(audio.duration) && progressBar && timeDisplay) {
         const progress = (audio.currentTime / audio.duration) * 100;
         progressBar.value = progress;
+        refreshProgressFill();
         timeDisplay.textContent = `${formatTime(audio.currentTime)}`;
         updateActiveTrackTimeInList();
         updateActiveTrackTimeInRecent();
@@ -1729,7 +1813,7 @@ audio.addEventListener('ended', () => {
         isPlaying = false;
         updatePlayPauseButton();
         currentTrackIndex = -1;
-        if (progressBar) progressBar.value = 0;
+        if (progressBar) { progressBar.value = 0; refreshProgressFill(); }
         if (timeDisplay) timeDisplay.textContent = '0:00';
         updateTracklist();
         updateAlbumArt(null);
@@ -1754,6 +1838,25 @@ audio.addEventListener('loadedmetadata', () => {
     }
 });
 
+
+function paintRangeFill(input, percent, activeColor = '#6d26ff', baseColor = '#1c2230') {
+    if (!input) return;
+    const p = Math.max(0, Math.min(100, percent));
+    input.style.background = `linear-gradient(to right, ${activeColor} 0%, ${activeColor} ${p}%, ${baseColor} ${p}%, ${baseColor} 100%)`;
+}
+
+function refreshProgressFill() {
+    if (!progressBar) return;
+    const percent = Number(progressBar.value || 0);
+    paintRangeFill(progressBar, percent, '#6d26ff', '#1a1f2d');
+}
+
+function refreshVolumeFill() {
+    if (!volumeSlider) return;
+    const percent = Number(volumeSlider.value || 0);
+    paintRangeFill(volumeSlider, percent, '#6d26ff', '#1a1f2d');
+}
+
 // [ГРОМКОСТЬ]
 function initVolume() {
     if (!volumeSlider || !volumePercent || !volumeIcon) return;
@@ -1769,12 +1872,14 @@ function initVolume() {
     volumeSlider.value = startVolume;
     volumePercent.textContent = startVolume + '%';
     updateVolumeIcon(startVolume);
+    refreshVolumeFill();
     
     volumeSlider.addEventListener('input', function(e) {
         const volume = parseInt(e.target.value);
         audio.volume = volume / 100;
         volumePercent.textContent = volume + '%';
         updateVolumeIcon(volume);
+        refreshVolumeFill();
         localStorage.setItem('volume', volume);
     });
 }
@@ -1797,7 +1902,8 @@ document.addEventListener('DOMContentLoaded', function() {
     updateAlbumArt(null);
     updateRecentTracksList();
     initTrackSearch();
-
+    refreshProgressFill();
+    refreshVolumeFill();
     if (trackSortSelect) {
         trackSortSelect.value = currentTrackSort;
         trackSortSelect.addEventListener('change', (e) => {

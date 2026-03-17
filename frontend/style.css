@@ -2272,3 +2272,117 @@ body {
   min-width: 38px;
   text-align: right;
 }
+/* ===== Requested fixes: volume/progress/playlists/eq ===== */
+.compact-volume {
+  background: transparent !important;
+  padding: 0;
+  gap: 7px;
+}
+
+#volumeSlider {
+  width: 62px;
+  height: 3px;
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+
+#volumeSlider::-webkit-slider-thumb {
+  width: 12px;
+  height: 12px;
+  background: #7b35ff;
+  box-shadow: 0 0 0 2px #090b10;
+}
+
+#volumeSlider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: #7b35ff;
+  border: 2px solid #090b10;
+}
+
+#volumePercent {
+  font-size: 13px;
+  min-width: 34px;
+  color: #c6d0e6;
+}
+
+.volume-icon {
+  position: relative;
+  width: 14px;
+  height: 12px;
+  border-left: 6px solid #7b35ff;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+
+.volume-icon::before,
+.volume-icon::after {
+  content: "";
+  position: absolute;
+  right: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 2px solid #7b35ff;
+  border-left-color: transparent;
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.volume-icon::before { width: 6px; height: 8px; }
+.volume-icon::after { width: 10px; height: 12px; right: -11px; }
+
+.volume-icon[data-level="low"]::before,
+.volume-icon[data-level="mid"]::before,
+.volume-icon[data-level="high"]::before { opacity: 1; }
+.volume-icon[data-level="high"]::after { opacity: 1; }
+
+.volume-icon[data-level="mute"] {
+  opacity: 0.6;
+}
+
+.progress-bar {
+  transition: background 0.2s ease;
+}
+
+.progress-bar::-webkit-slider-thumb {
+  transition: transform 0.12s ease;
+}
+
+.progress-bar::-webkit-slider-thumb:active {
+  transform: scale(1.08);
+}
+
+.progress-bar::-moz-range-thumb {
+  transition: transform 0.12s ease;
+}
+
+#toggleEqBtn::before,
+#toggleEqBtn::after {
+  content: "";
+  position: absolute;
+  bottom: 5px;
+  left: 6px;
+  width: 2px;
+  height: 8px;
+  border-radius: 2px;
+  background: #7b35ff;
+  box-shadow: 4px -2px 0 #7b35ff, 8px -5px 0 #7b35ff, 12px -1px 0 #7b35ff, 16px -4px 0 #7b35ff;
+}
+#toggleEqBtn::after { display: none; }
+
+.horizontal-playlists {
+  justify-content: center;
+}
+
+.playlist-square {
+  display: flex;
+  align-items: center;
+}
+
+.playlist-square-cover {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  height: auto;
+}
