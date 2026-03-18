@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
-const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -16,50 +15,81 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
 app.options('*', cors());
 
-// Функция получения ссылки с Яндекс.Диска
-async function getYandexDiskLink(filename) {
+// ========== ЯНДЕКС.ДИСК С ТОКЕНОМ ==========
+const YANDEX_TOKEN = process.env.YANDEX_TOKEN;
+const YANDEX_API_URL = 'https://cloud-api.yandex.net/v1/disk';
+
+const yandexApi = axios.create({
+  baseURL: YANDEX_API_URL,
+  headers: {
+    'Authorization': `OAuth ${YANDEX_TOKEN}`
+  }
+});
+
+console.log('✅ Яндекс.Диск инициализирован с токеном');
+
+// ========== ФУНКЦИИ ==========
+async function getDownloadLink(remotePath) {
   try {
-    const publicKey = process.env.YANDEX_DISK_PUBLIC_KEY;
-    const apiUrl = `https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key=${publicKey}&path=/${filename}`;
-    
-    const response = await axios.get(apiUrl, {
-      timeout: 10000
+    const response = await yandexApi.get('/resources/download', {
+      params: { path: remotePath }
     });
-    
     return response.data.href;
   } catch (error) {
-    console.error('Ошибка получения ссылки Яндекс.Диска:', error.message);
+    console.error('❌ Ошибка получения ссылки:', error.response?.data || error.message);
     throw error;
   }
 }
 
-// Стриминг аудио
-app.get('/api/stream/:filename', async (req, res) => {
-  const filename = req.params.filename;
-  console.log(`🎵 Запрос на стриминг: ${filename}`);
-  
-  // CORS заголовки
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
-  res.setHeader('Access-Control-Allow-Headers', 'Range');
-  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
-  res.setHeader('Accept-Ranges', 'bytes');
+async function getFileInfo(remotePath) {
+  try {
+    const response = await yandexApi.get('/resources', {
+      params: { path: remotePath }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('❌ Ошибка получения информации о файле:', error.response?.data || error.message);
+    throw error;
+  }
+}
+
+// ========== СТРИМИНГ ==========
+app.get('/api/stream/:path(*)', async (req, res) => {
+  const remotePath = decodeURIComponent(req.params.path);
+  console.log(`\n🎵 Запрос на стриминг: ${remotePath}`);
   
   try {
-    const downloadUrl = await getYandexDiskLink(filename);
-    console.log('🔗 Ссылка на скачивание получена');
+    // Получаем информацию о файле
+    const fileInfo = await getFileInfo(remotePath);
+    console.log('✅ Файл найден:', fileInfo.name);
+    console.log('📏 Размер:', fileInfo.size, 'байт');
     
+    // Получаем ссылку на скачивание
+    const downloadUrl = await getDownloadLink(remotePath);
+    console.log('🔗 Ссылка получена');
+    
+    // Определяем MIME-тип
+    const mimeType = fileInfo.mime_type || 'audio/opus';
+    console.log('🎵 MIME-тип:', mimeType);
+    
+    // Заголовки для стриминга
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+    
+    // Обрабатываем Range запрос (для перемотки)
     const range = req.headers.range;
     const headers = {};
-    
     if (range) {
       headers.Range = range;
+      console.log('📌 Range:', range);
     }
     
+    // Запрашиваем файл с Яндекс.Диска
     const response = await axios({
       method: 'get',
       url: downloadUrl,
@@ -68,10 +98,7 @@ app.get('/api/stream/:filename', async (req, res) => {
       timeout: 30000
     });
     
-    if (response.headers['content-type']) {
-      res.setHeader('Content-Type', response.headers['content-type']);
-    }
-    
+    // Передаём заголовки от Яндекса
     if (response.headers['content-length']) {
       res.setHeader('Content-Length', response.headers['content-length']);
     }
@@ -80,12 +107,22 @@ app.get('/api/stream/:filename', async (req, res) => {
       res.setHeader('Content-Range', response.headers['content-range']);
     }
     
+    // Устанавливаем статус (206 для частичного контента)
     res.status(range ? 206 : 200);
     
+    // Считаем отправленные байты
+    let bytesSent = 0;
+    response.data.on('data', (chunk) => {
+      bytesSent += chunk.length;
+      console.log(`📤 Отправлено ${bytesSent} байт`);
+    });
+    
+    // Отправляем поток клиенту
     response.data.pipe(res);
     
+    // Обработка отключения клиента
     req.on('close', () => {
-      console.log('📴 Клиент отключился');
+      console.log(`📴 Клиент отключился, отправлено ${bytesSent} байт`);
       if (response.data && response.data.destroy) {
         response.data.destroy();
       }
@@ -93,17 +130,17 @@ app.get('/api/stream/:filename', async (req, res) => {
     
     response.data.on('error', (error) => {
       if (error.code === 'ECONNRESET') {
-        console.log('Соединение сброшено клиентом');
+        console.log('⚠️ Соединение сброшено (нормально)');
         return;
       }
-      console.error('Ошибка потока:', error.message);
+      console.error('❌ Ошибка потока:', error.message);
     });
     
   } catch (error) {
     console.error('❌ Ошибка стриминга:', error.message);
     
-    if (error.code === 'ECONNRESET' || error.code === 'ERR_STREAM_PREMATURE_CLOSE') {
-      return;
+    if (error.response?.status === 404) {
+      return res.status(404).json({ error: 'Файл не найден' });
     }
     
     if (!res.headersSent) {
@@ -112,26 +149,39 @@ app.get('/api/stream/:filename', async (req, res) => {
   }
 });
 
-// Получение списка треков
-app.get('/api/tracks', async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+// ========== ПРОВЕРКА ФАЙЛА ==========
+app.get('/api/check/:path(*)', async (req, res) => {
+  const remotePath = decodeURIComponent(req.params.path);
   
   try {
-    // Здесь ваш код получения треков
-    const tracks = [];
-    res.json(tracks);
+    const fileInfo = await getFileInfo(remotePath);
+    res.json({
+      exists: true,
+      name: fileInfo.name,
+      size: fileInfo.size,
+      mime_type: fileInfo.mime_type,
+      path: remotePath
+    });
   } catch (error) {
-    console.error('Ошибка получения треков:', error);
-    res.status(500).json({ error: 'Ошибка получения треков' });
+    res.json({
+      exists: false,
+      path: remotePath,
+      error: error.message
+    });
   }
 });
 
-// Тестовый эндпоинт
+// ========== HEALTH CHECK ==========
 app.get('/api/health', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.json({ status: 'ok', message: 'Server is running' });
+  res.json({ 
+    status: 'ok', 
+    storage: 'yandex-disk',
+    token: YANDEX_TOKEN ? 'установлен' : 'не установлен',
+    timestamp: new Date().toISOString()
+  });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Сервер запущен на порту ${PORT}`);
+  console.log(`🔑 Токен: ${YANDEX_TOKEN ? 'установлен' : 'ОТСУТСТВУЕТ!'}`);
 });
