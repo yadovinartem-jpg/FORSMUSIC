@@ -218,8 +218,10 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   }
 });
 
-// ========== ИСПРАВЛЕННЫЙ СТРИМИНГ С ПРАВИЛЬНЫМИ CORS-ЗАГОЛОВКАМИ ==========
+// ========== УЛУЧШЕННЫЙ СТРИМИНГ С ОБРАБОТКОЙ ОШИБОК ==========
 app.get('/api/stream/:path(*)', async (req, res) => {
+  let controller;
+  
   try {
     const remotePath = decodeURIComponent(req.params.path);
     console.log('🎵 Запрос на стриминг пути:', remotePath);
@@ -228,7 +230,7 @@ app.get('/api/stream/:path(*)', async (req, res) => {
     let fileInfo;
     try {
       fileInfo = await getFileInfo(remotePath);
-      console.log('📁 Файл найден на Яндекс.Диске:', fileInfo.name);
+      console.log('📁 Файл найден на Яндекс.Диске:', fileInfo.name, 'размер:', fileInfo.size);
     } catch (error) {
       console.error('❌ Файл не найден на Яндекс.Диске:', error.response?.data || error.message);
       return res.status(404).json({ error: 'File not found on Yandex.Disk' });
@@ -237,38 +239,31 @@ app.get('/api/stream/:path(*)', async (req, res) => {
     const downloadUrl = await getDownloadLink(remotePath);
     console.log('🔗 Ссылка на скачивание получена');
     
-    let mimeType = fileInfo.mime_type || 'audio/ogg';
+    let mimeType = fileInfo.mime_type || 'audio/opus';
     
-    // ВАЖНО: Правильные CORS-заголовки для поддержки эквалайзера
+    // Устанавливаем заголовки
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('Connection', 'keep-alive');
-    
-    // Критически важные заголовки для CORS и эквалайзера
+    res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
     
-    // Для поддержки частичной загрузки (Range requests)
-    res.setHeader('Accept-Ranges', 'bytes');
+    // Создаем контроллер для отмены запроса при необходимости
+    controller = new AbortController();
     
+    // Увеличиваем таймаут до 60 секунд
     const response = await axios({
       method: 'get',
       url: downloadUrl,
       responseType: 'stream',
-      timeout: 30000,
+      timeout: 60000, // Увеличили с 30000 до 60000
+      signal: controller.signal,
       headers: {
         'User-Agent': 'ForsityMusic/1.0',
-        'Range': req.headers.range || '' // Передаём Range, если есть
+        'Range': req.headers.range || ''
       }
     });
     
-    // Копируем все заголовки от Яндекс.Диска
     if (response.headers['content-length']) {
       res.setHeader('Content-Length', response.headers['content-length']);
     }
@@ -277,18 +272,34 @@ app.get('/api/stream/:path(*)', async (req, res) => {
       res.setHeader('Content-Range', response.headers['content-range']);
     }
     
-    // Передаём поток клиенту
-    response.data.pipe(res);
-    
+    // Обработка ошибок потока
     response.data.on('error', (err) => {
-      console.error('❌ Ошибка потока:', err);
+      console.error('❌ Ошибка потока данных от Яндекс.Диска:', err.message);
       if (!res.headersSent) {
         res.status(500).end();
       }
     });
     
+    // Если клиент закрыл соединение, отменяем запрос к Яндекс.Диску
+    req.on('close', () => {
+      console.log('👋 Клиент закрыл соединение');
+      if (controller) {
+        controller.abort();
+      }
+    });
+    
+    // Передаём поток клиенту
+    response.data.pipe(res);
+    
   } catch (error) {
-    console.error('❌ Ошибка стриминга:', error);
+    if (error.code === 'ECONNRESET' || error.code === 'ECONNABORTED') {
+      console.log('⚠️ Соединение сброшено (нормальная ситуация при стриминге)');
+    } else if (error.name === 'AbortError') {
+      console.log('⏸️ Запрос отменён');
+    } else {
+      console.error('❌ Ошибка стриминга:', error.message);
+    }
+    
     if (!res.headersSent) {
       res.status(500).json({ error: 'Streaming failed' });
     }
