@@ -1,62 +1,32 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const multer = require('multer');
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
-const ffmpeg = require('fluent-ffmpeg');
-const ffmpegStatic = require('ffmpeg-static');
-const { v4: uuidv4 } = require('uuid');
-
-// Настройка ffmpeg
-ffmpeg.setFfmpegPath(ffmpegStatic);
-console.log('✅ FFmpeg initialized');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ========== CORS ==========
-const allowedOrigins = [
-  'https://yadovinartem-jpg.github.io',
-  'http://localhost:5500',
-  'http://127.0.0.1:5500'
-];
-
+// ========== CORS (ПРАВИЛЬНАЯ НАСТРОЙКА) ==========
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      return callback(new Error('CORS not allowed'), false);
-    }
-    return callback(null, true);
-  },
+  origin: 'https://yadovinartem-jpg.github.io',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Range'],
-  exposedHeaders: ['Content-Length', 'Content-Range', 'Accept-Ranges']
+  methods: ['GET', 'POST', 'OPTIONS', 'HEAD'],
+  allowedHeaders: ['Content-Type', 'Range', 'Accept'],
+  exposedHeaders: ['Content-Length', 'Content-Range', 'Accept-Ranges', 'Content-Type']
 }));
 
-app.options('*', cors());
-app.use(express.json());
-
-// ========== ДОПОЛНИТЕЛЬНЫЕ CORS-ЗАГОЛОВКИ ==========
+// Дополнительные CORS-заголовки для всех ответов
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
   res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Range, Authorization');
-  res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+  res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, Content-Type');
   next();
 });
 
-// ========== MULTER ==========
-const upload = multer({ 
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 100 * 1024 * 1024 } // 100MB
-});
+app.use(express.json());
+app.options('*', cors());
 
-// ========== ЯНДЕКС.ДИСК ==========
+// ========== ЯНДЕКС.ДИСК С ТОКЕНОМ ==========
 const YANDEX_TOKEN = process.env.YANDEX_TOKEN;
 const YANDEX_API_URL = 'https://cloud-api.yandex.net/v1/disk';
 
@@ -67,28 +37,19 @@ const yandexApi = axios.create({
   }
 });
 
-console.log('✅ Яндекс.Диск инициализирован');
+console.log('✅ Яндекс.Диск инициализирован с токеном');
 
 // ========== ФУНКЦИИ ==========
-async function getUploadLink(remotePath) {
-  const response = await yandexApi.get('/resources/upload', {
-    params: { path: remotePath, overwrite: true }
-  });
-  return response.data.href;
-}
-
-async function uploadFile(uploadUrl, fileBuffer) {
-  await axios.put(uploadUrl, fileBuffer, {
-    headers: { 'Content-Type': 'audio/opus' }
-  });
-  console.log('✅ Файл загружен на Яндекс.Диск');
-}
-
-async function publishFile(remotePath) {
-  await yandexApi.put('/resources/publish', null, {
-    params: { path: remotePath }
-  });
-  console.log('✅ Файл опубликован');
+async function getDownloadLink(remotePath) {
+  try {
+    const response = await yandexApi.get('/resources/download', {
+      params: { path: remotePath }
+    });
+    return response.data.href;
+  } catch (error) {
+    console.error('❌ Ошибка получения ссылки:', error.response?.data || error.message);
+    throw error;
+  }
 }
 
 async function getFileInfo(remotePath) {
@@ -103,172 +64,51 @@ async function getFileInfo(remotePath) {
   }
 }
 
-async function deleteFile(remotePath) {
-  await yandexApi.delete('/resources', {
-    params: { path: remotePath, permanently: true }
-  });
-  console.log('✅ Файл удалён с Яндекс.Диска');
-}
-
-async function getDownloadLink(remotePath) {
-  try {
-    const response = await yandexApi.get('/resources/download', {
-      params: { path: remotePath }
-    });
-    return response.data.href;
-  } catch (error) {
-    console.error('❌ Ошибка получения ссылки на скачивание:', error.response?.data || error.message);
-    throw error;
-  }
-}
-
-async function uploadToYandex(fileBuffer, fileName) {
-  console.log('☁️ Загрузка на Яндекс.Диск...');
-  
-  const remotePath = `/forsity-music/${uuidv4()}-${fileName}`;
-  
-  const uploadUrl = await getUploadLink(remotePath);
-  await uploadFile(uploadUrl, fileBuffer);
-  await publishFile(remotePath);
-  const fileInfo = await getFileInfo(remotePath);
-  
-  return {
-    path: remotePath,
-    publicUrl: fileInfo.public_url,
-    name: fileInfo.name,
-    size: fileInfo.size
-  };
-}
-
-function compressAudio(inputBuffer, inputFormat) {
-  return new Promise((resolve, reject) => {
-    console.log('🔄 Сжатие аудио...');
-    
-    const tempDir = path.join(__dirname, 'temp');
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-    
-    const inputPath = path.join(tempDir, `${uuidv4()}.${inputFormat}`);
-    const outputPath = path.join(tempDir, `${uuidv4()}.opus`);
-    
-    fs.writeFileSync(inputPath, inputBuffer);
-    
-    ffmpeg(inputPath)
-      .audioCodec('libopus')
-      .audioBitrate(128)
-      .audioChannels(2)
-      .audioFrequency(48000)
-      .output(outputPath)
-      .on('end', () => {
-        const compressedBuffer = fs.readFileSync(outputPath);
-        fs.unlinkSync(inputPath);
-        fs.unlinkSync(outputPath);
-        console.log(`✅ Сжато: ${inputBuffer.length} → ${compressedBuffer.length} байт`);
-        resolve(compressedBuffer);
-      })
-      .on('error', (err) => {
-        if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-        if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-        reject(err);
-      })
-      .run();
-  });
-}
-
-// ========== ЭНДПОЙНТЫ ==========
-app.post('/api/upload', upload.single('audio'), async (req, res) => {
-  console.log('📥 Получен запрос на загрузку');
-  
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file provided' });
-    }
-
-    const { title, artist } = req.body;
-    const inputFormat = req.file.originalname.split('.').pop().toLowerCase();
-
-    const compressedBuffer = await compressAudio(req.file.buffer, inputFormat);
-
-    const fileName = `${title || 'untitled'} - ${artist || 'unknown'}.opus`
-      .replace(/[^a-zA-Z0-9\s\-_.]/g, '')
-      .substring(0, 100);
-
-    const yandexFile = await uploadToYandex(compressedBuffer, fileName);
-
-    res.json({
-      success: true,
-      file: {
-        path: yandexFile.path,
-        title: title || req.file.originalname,
-        artist: artist || 'Unknown',
-        format: 'opus',
-        size: yandexFile.size
-      }
-    });
-    
-    console.log('✅ Загрузка завершена, путь:', yandexFile.path);
-    
-  } catch (error) {
-    console.error('❌ Ошибка загрузки:', error);
-    res.status(500).json({ 
-      error: 'Upload failed',
-      details: error.message 
-    });
-  }
-});
-
-// ========== ИСПРАВЛЕННЫЙ СТРИМИНГ С ПРАВИЛЬНЫМИ CORS-ЗАГОЛОВКАМИ ==========
+// ========== СТРИМИНГ С ПРАВИЛЬНЫМ CORS ==========
 app.get('/api/stream/:path(*)', async (req, res) => {
+  const remotePath = decodeURIComponent(req.params.path);
+  console.log(`\n🎵 Запрос на стриминг: ${remotePath}`);
+  
+  // ВАЖНО: CORS-заголовки для эквалайзера
+  res.setHeader('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
+  res.setHeader('Access-Control-Allow-Headers', 'Range');
+  res.setHeader('Accept-Ranges', 'bytes');
+  
   try {
-    const remotePath = decodeURIComponent(req.params.path);
-    console.log('🎵 Запрос на стриминг пути:', remotePath);
+    // Получаем информацию о файле
+    const fileInfo = await getFileInfo(remotePath);
+    console.log('✅ Файл найден:', fileInfo.name);
+    console.log('📏 Размер:', fileInfo.size, 'байт');
     
-    // Проверяем, есть ли файл
-    let fileInfo;
-    try {
-      fileInfo = await getFileInfo(remotePath);
-      console.log('📁 Файл найден на Яндекс.Диске:', fileInfo.name);
-    } catch (error) {
-      console.error('❌ Файл не найден на Яндекс.Диске:', error.response?.data || error.message);
-      return res.status(404).json({ error: 'File not found on Yandex.Disk' });
+    // Получаем ссылку на скачивание
+    const downloadUrl = await getDownloadLink(remotePath);
+    console.log('🔗 Ссылка получена');
+    
+    // Определяем MIME-тип
+    const mimeType = fileInfo.mime_type || 'audio/opus';
+    res.setHeader('Content-Type', mimeType);
+    
+    // Обрабатываем Range запрос (для перемотки)
+    const range = req.headers.range;
+    const headers = {};
+    if (range) {
+      headers.Range = range;
+      console.log('📌 Range:', range);
     }
     
-    const downloadUrl = await getDownloadLink(remotePath);
-    console.log('🔗 Ссылка на скачивание получена');
-    
-    let mimeType = fileInfo.mime_type || 'audio/ogg';
-    
-    // ВАЖНО: Правильные CORS-заголовки для поддержки эквалайзера
-    res.setHeader('Content-Type', mimeType);
-    res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('Connection', 'keep-alive');
-    
-    // Критически важные заголовки для CORS и эквалайзера
-    res.setHeader('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
-    
-    // Для поддержки частичной загрузки (Range requests)
-    res.setHeader('Accept-Ranges', 'bytes');
-    
+    // Запрашиваем файл с Яндекс.Диска
     const response = await axios({
       method: 'get',
       url: downloadUrl,
       responseType: 'stream',
-      timeout: 30000,
-      headers: {
-        'User-Agent': 'ForsityMusic/1.0',
-        'Range': req.headers.range || '' // Передаём Range, если есть
-      }
+      headers: headers,
+      timeout: 30000
     });
     
-    // Копируем все заголовки от Яндекс.Диска
+    // Передаём заголовки от Яндекса
     if (response.headers['content-length']) {
       res.setHeader('Content-Length', response.headers['content-length']);
     }
@@ -277,85 +117,81 @@ app.get('/api/stream/:path(*)', async (req, res) => {
       res.setHeader('Content-Range', response.headers['content-range']);
     }
     
-    // Передаём поток клиенту
+    // Устанавливаем статус (206 для частичного контента)
+    res.status(range ? 206 : 200);
+    
+    // Отправляем поток клиенту
     response.data.pipe(res);
     
-    response.data.on('error', (err) => {
-      console.error('❌ Ошибка потока:', err);
-      if (!res.headersSent) {
-        res.status(500).end();
+    // Обработка отключения клиента
+    req.on('close', () => {
+      console.log('📴 Клиент отключился');
+      if (response.data && response.data.destroy) {
+        response.data.destroy();
       }
     });
     
-  } catch (error) {
-    console.error('❌ Ошибка стриминга:', error);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Streaming failed' });
-    }
-  }
-});
-
-// Обработка preflight OPTIONS запросов для стриминга
-app.options('/api/stream/:path(*)', (req, res) => {
-  res.header('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Range');
-  res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
-  res.header('Access-Control-Max-Age', '86400');
-  res.sendStatus(204);
-});
-
-// ========== ПРОВЕРКА ФАЙЛА (ДЛЯ ОТЛАДКИ) ==========
-app.get('/api/check/:path(*)', async (req, res) => {
-  try {
-    const remotePath = decodeURIComponent(req.params.path);
-    console.log('🔍 Проверка файла:', remotePath);
+    response.data.on('error', (error) => {
+      if (error.code === 'ECONNRESET') {
+        console.log('⚠️ Соединение сброшено (нормально при паузе)');
+        return;
+      }
+      console.error('❌ Ошибка потока:', error.message);
+    });
     
-    try {
-      const fileInfo = await getFileInfo(remotePath);
-      res.json({
-        exists: true,
-        path: remotePath,
-        name: fileInfo.name,
-        public_url: fileInfo.public_url,
-        mime_type: fileInfo.mime_type,
-        size: fileInfo.size
-      });
-    } catch (error) {
-      res.json({
-        exists: false,
-        path: remotePath,
-        error: error.response?.data?.message || error.message
-      });
-    }
   } catch (error) {
-    res.status(500).json({ error: 'Check failed', details: error.message });
+    console.error('❌ Ошибка стриминга:', error.message);
+    
+    if (error.response?.status === 404) {
+      return res.status(404).json({ error: 'Файл не найден' });
+    }
+    
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Ошибка стриминга' });
+    }
   }
 });
 
-// ========== УДАЛЕНИЕ ==========
-app.delete('/api/track/:path(*)', async (req, res) => {
+// ========== ПРОВЕРКА ФАЙЛА ==========
+app.get('/api/check/:path(*)', async (req, res) => {
+  const remotePath = decodeURIComponent(req.params.path);
+  
+  // CORS-заголовки для проверки
+  res.setHeader('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
   try {
-    const remotePath = decodeURIComponent(req.params.path);
-    await deleteFile(remotePath);
-    res.json({ success: true });
+    const fileInfo = await getFileInfo(remotePath);
+    res.json({
+      exists: true,
+      name: fileInfo.name,
+      size: fileInfo.size,
+      mime_type: fileInfo.mime_type,
+      path: remotePath
+    });
   } catch (error) {
-    console.error('❌ Ошибка удаления:', error);
-    res.status(500).json({ error: 'Delete failed' });
+    res.json({
+      exists: false,
+      path: remotePath,
+      error: error.message
+    });
   }
 });
 
 // ========== HEALTH CHECK ==========
 app.get('/api/health', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
   res.json({ 
     status: 'ok', 
     storage: 'yandex-disk',
+    token: YANDEX_TOKEN ? 'установлен' : 'не установлен',
     timestamp: new Date().toISOString()
   });
 });
 
-// ========== ЗАПУСК ==========
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Сервер запущен на порту ${PORT}`);
+  console.log(`🔑 Токен: ${YANDEX_TOKEN ? 'установлен' : 'ОТСУТСТВУЕТ!'}`);
 });
