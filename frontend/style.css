@@ -2387,7 +2387,6 @@ body {
   aspect-ratio: 1 / 1;
   height: auto;
 }
-
 /* ===== Alignment and layout hotfixes ===== */
 :root {
   --vk-main-bg: #04060a;
@@ -2759,3 +2758,4 @@ body,
   line-height: 1;
   white-space: nowrap;
 }
+
