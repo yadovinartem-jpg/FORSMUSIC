@@ -245,8 +245,41 @@ async function extractMetadata(file) {
         return { title: null, artist: null, albumArt: null, year: '' };
     }
 }
+function getTrackDurationValue(track = null) {
+    const duration = Number(track?.duration);
+    return Number.isFinite(duration) && duration > 0 ? duration : 0;
+}
 
-// ========== ЗАГРУЗКА ТРЕКОВ ==========
+function readAudioDuration(file) {
+    return new Promise((resolve) => {
+        if (!file) {
+            resolve(0);
+            return;
+        }
+
+        const tempAudio = document.createElement('audio');
+        const objectUrl = URL.createObjectURL(file);
+
+        const cleanup = () => {
+            tempAudio.src = '';
+            URL.revokeObjectURL(objectUrl);
+        };
+
+        tempAudio.preload = 'metadata';
+        tempAudio.onloadedmetadata = () => {
+            const duration = Number(tempAudio.duration);
+            cleanup();
+            resolve(Number.isFinite(duration) && duration > 0 ? duration : 0);
+        };
+        tempAudio.onerror = () => {
+            cleanup();
+            resolve(0);
+        };
+        tempAudio.src = objectUrl;
+    });
+}
+
+// [ЗАГРУЗКА ТРЕКОВ]
 uploadBtn.addEventListener('click', () => {
     uploadModal.classList.remove('hidden');
     fileInput.value = '';
@@ -288,6 +321,7 @@ fileInput.addEventListener('change', async (e) => {
         const fileName = file.name.replace('.mp3', '').replace('.MP3', '');
         
         const metadata = await extractMetadata(file);
+        const duration = await readAudioDuration(file);
         
         return {
             url: fileUrl,
@@ -304,7 +338,6 @@ fileInput.addEventListener('change', async (e) => {
     // Ждем завершения всех промисов
     const results = await Promise.all(metadataPromises);
     pendingTracks = results.filter(track => track !== null);
-    
     updatePendingTracksList();
     confirmUploadBtn.disabled = pendingTracks.length === 0;
 });
@@ -539,7 +572,7 @@ function updateTracklist() {
             miniCoverHtml = canvas.outerHTML;
         }
         
-        const durationText = index === currentTrackIndex ? formatTime(audio.currentTime || 0) : formatTime(track.duration || 0);
+        const durationText = index === currentTrackIndex ? formatTime(audio.currentTime || 0) : formatTime(getTrackDurationValue(track));
 
         li.innerHTML = `
             ${miniCoverHtml}
@@ -571,7 +604,7 @@ function updateActiveTrackTimeInList() {
     if (isPlaying || audio.currentTime > 0) {
         durationEl.textContent = formatTime(audio.currentTime || 0);
     } else {
-        durationEl.textContent = formatTime((tracks[currentTrackIndex] && tracks[currentTrackIndex].duration) || 0);
+        durationEl.textContent = formatTime(getTrackDurationValue(tracks[currentTrackIndex]));
     }
 }
 
@@ -583,7 +616,7 @@ function updateActiveTrackTimeInRecent() {
     if (isPlaying || audio.currentTime > 0) {
         durationEl.textContent = formatTime(audio.currentTime || 0);
     } else {
-        durationEl.textContent = formatTime((tracks[currentTrackIndex] && tracks[currentTrackIndex].duration) || 0);
+        durationEl.textContent = formatTime(getTrackDurationValue(tracks[currentTrackIndex]));
     }
 }
 
@@ -596,7 +629,6 @@ function addTrackToRecent(track) {
     recentTrackPaths = recentTrackPaths.filter(path => path !== track.path);
     recentTrackPaths.unshift(track.path);
     recentTrackPaths = recentTrackPaths.slice(0, 20); // храним только 20 последних
-
     saveRecentTracks();
     updateRecentTracksList();
 }
@@ -644,8 +676,7 @@ function updateRecentTracksList() {
             miniCtx.fillRect(0, 0, 32, 32);
             coverHtml = canvas.outerHTML;
         }
-
-        const durationText = index === currentTrackIndex ? formatTime(audio.currentTime || 0) : formatTime(track.duration || 0);
+        const durationText = index === currentTrackIndex ? formatTime(audio.currentTime || 0) : formatTime(getTrackDurationValue(track));
 
         li.innerHTML = `
             ${coverHtml}
@@ -731,7 +762,6 @@ async function handleTrackSearch() {
 
 function initTrackSearch() {
     if (!trackSearchInput) return;
-
     trackSearchInput.addEventListener('input', () => {
         clearTimeout(trackSearchTimer);
         trackSearchTimer = setTimeout(() => {
@@ -944,7 +974,6 @@ async function deleteTrackByMenu({ deleteFromCloud }) {
             console.error('Ошибка удаления с Яндекс.Диска:', error);
         }
     }
-
     // Удаляем трек из всех плейлистов
     playlists.forEach(playlist => {
         playlist.tracks = playlist.tracks.filter(t => t.path !== trackToDelete.path);
@@ -953,7 +982,6 @@ async function deleteTrackByMenu({ deleteFromCloud }) {
 
     recentTrackPaths = recentTrackPaths.filter(path => path !== trackToDelete.path);
     saveRecentTracks();
-
     // Очищаем временный URL если есть
     if (trackToDelete.url && trackToDelete.url.startsWith('blob:')) {
         URL.revokeObjectURL(trackToDelete.url);
@@ -1359,7 +1387,7 @@ function updateAlbumArt(track) {
 }
 
 function formatTime(seconds) {
-    if (isNaN(seconds)) return '0:00';
+    if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -1718,18 +1746,28 @@ prevBtn.addEventListener('click', playPrev);
 nextBtn.addEventListener('click', playNext);
 
 progressBar.addEventListener('input', () => {
-    if (audio.duration && !isNaN(audio.duration)) {
-        audio.currentTime = (progressBar.value / 100) * audio.duration;
+    const activeTrack = tracks[currentTrackIndex];
+    const totalDuration = Number.isFinite(audio.duration) && audio.duration > 0
+        ? audio.duration
+        : getTrackDurationValue(activeTrack);
+
+    if (totalDuration > 0) {
+        audio.currentTime = (progressBar.value / 100) * totalDuration;
     }
     refreshProgressFill();
 });
 
 audio.addEventListener('timeupdate', () => {
-    if (audio.duration && !isNaN(audio.duration) && progressBar && timeDisplay) {
-        const progress = (audio.currentTime / audio.duration) * 100;
+    const activeTrack = tracks[currentTrackIndex];
+    const totalDuration = Number.isFinite(audio.duration) && audio.duration > 0
+        ? audio.duration
+        : getTrackDurationValue(activeTrack);
+
+    if (totalDuration > 0 && progressBar && timeDisplay) {
+        const progress = (audio.currentTime / totalDuration) * 100;
         progressBar.value = progress;
         refreshProgressFill();
-        timeDisplay.textContent = `${formatTime(audio.currentTime)}`;
+        timeDisplay.textContent = formatTime(audio.currentTime);
         updateActiveTrackTimeInList();
         updateActiveTrackTimeInRecent();
     }
@@ -1761,8 +1799,23 @@ audio.addEventListener('loadedmetadata', () => {
         saveTracks();
         updateTracklist();
     }
+
+    if (currentTrackIndex >= 0 && tracks[currentTrackIndex]) {
+        tracks[currentTrackIndex].duration = getTrackDurationValue({ duration: audio.duration }) || getTrackDurationValue(tracks[currentTrackIndex]);
+        saveTracks();
+        updateTracklist();
+        updateRecentTracksList();
+    }
 });
 
+audio.addEventListener('play', () => {
+    isPlaying = true;
+    updatePlayPauseButton();
+});
+audio.addEventListener('pause', () => {
+    isPlaying = false;
+    updatePlayPauseButton();
+});
 function paintRangeFill(input, percent, activeColor = '#6d26ff', baseColor = '#1c2230') {
     if (!input) return;
     const p = Math.max(0, Math.min(100, percent));
@@ -1834,6 +1887,13 @@ document.addEventListener('DOMContentLoaded', function() {
             currentTrackSort = e.target.value;
             localStorage.setItem('track_sort', currentTrackSort);
             updateTracklist();
+        });
+    }
+
+    if (moreActionsBtn) {
+        moreActionsBtn.addEventListener('click', () => {
+            if (currentTrackIndex === -1) return;
+            openTrackMenu(currentTrackIndex);
         });
     }
     
