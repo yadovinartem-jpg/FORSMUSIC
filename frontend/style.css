@@ -2386,3 +2386,78 @@ body {
   aspect-ratio: 1 / 1;
   height: auto;
 }
+/* ===== Alignment and layout hotfixes ===== */
+:root {
+  --vk-main-bg: #04060a;
+}
+
+.vk-top-player {
+  align-items: center;
+}
+
+.left-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.left-controls .icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+#prevBtn::before { left: 3px; top: 7px; }
+#prevBtn::after { left: 12px; top: 7px; }
+#nextBtn::before { right: 3px; top: 7px; }
+#nextBtn::after { right: 12px; top: 7px; }
+#shuffleBtn::before { top: 9px; }
+#shuffleBtn::after { top: 17px; }
+#repeatBtn::before { top: 6px; }
+#repeatBtn::after { top: 6px; }
+
+.progress-topline {
+  align-items: center;
+}
+
+#timeDisplay,
+.time-display {
+  font-variant-numeric: tabular-nums;
+}
+
+/* keep only single upper time in top panel */
+.vk-top-player .time-display {
+  position: static;
+  line-height: 1;
+}
+
+.recent-tracks-list {
+  grid-auto-columns: minmax(178px, 178px);
+}
+
+.recent-track-item {
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  min-height: 54px;
+}
+
+.recent-track-item .track-mini-cover {
+  width: 38px;
+  height: 38px;
+}
+
+.playlists-section {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.horizontal-playlists {
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.playlist-square {
+  align-self: center;
+}
