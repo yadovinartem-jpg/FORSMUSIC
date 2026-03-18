@@ -1,6 +1,8 @@
-// Инициализация Telegram Web App
-const tg = window.Telegram.WebApp;
-tg.expand();
+// Инициализация Telegram Web App (с безопасным fallback для обычного браузера)
+const tg = window.Telegram?.WebApp;
+if (tg) {
+    tg.expand();
+}
 
 // Адрес бэкенд-сервера (ваш Render URL)
 const API_URL = 'https://stunning-enigma-7vj6wv7x996vhx5px-3000.app.github.dev/api';
@@ -35,7 +37,8 @@ const coverFileInput = document.getElementById('coverFileInput');
 const trackMenu = document.getElementById('trackMenu');
 const closeTrackMenuBtn = document.getElementById('closeTrackMenuBtn');
 const showAddToPlaylistBtn = document.getElementById('showAddToPlaylistBtn');
-const deleteTrackBtn = document.getElementById('deleteTrackBtn');
+const deleteTrackLocalBtn = document.getElementById('deleteTrackLocalBtn');
+const deleteTrackCloudBtn = document.getElementById('deleteTrackCloudBtn');
 
 // Меню выбора плейлиста
 const playlistChoiceMenu = document.getElementById('playlistChoiceMenu');
@@ -51,6 +54,12 @@ const playlistsGrid = document.getElementById('playlistsGrid');
 
 // Треклист
 const tracklist = document.getElementById('tracklist');
+const trackSortSelect = document.getElementById('trackSortSelect');
+const recentTracksList = document.getElementById('recentTracksList');
+const trackSearchInput = document.getElementById('trackSearchInput');
+const searchResults = document.getElementById('searchResults');
+const localSearchResults = document.getElementById('localSearchResults');
+const remoteSearchResults = document.getElementById('remoteSearchResults');
 
 // Плеер
 const playPauseBtn = document.getElementById('playPauseBtn');
@@ -89,9 +98,56 @@ let currentTrackForMenu = null;
 let repeatMode = 0;
 let shuffleMode = false;
 let shuffledIndices = [];
+let recentTrackPaths = JSON.parse(localStorage.getItem('recent_tracks')) || [];
+let currentTrackSort = localStorage.getItem('track_sort') || 'date_desc';
+let trackSearchTimer = null;
+let draftPlaylistTracks = [];
 
-// ========== ИНИЦИАЛИЗАЦИЯ ==========
-updateTracklist();
+// [СОХРАНЕНИЕ И ЗАГРУЗКА ТРЕКОВ]
+function saveTracks() {
+    try {
+        const tracksToSave = tracks.map(track => ({
+            path: track.path,
+            title: track.title,
+            artist: track.artist,
+            albumArt: track.albumArt,
+            year: track.year || '',
+            addedAt: track.addedAt || Date.now(),
+            duration: track.duration || 0,
+            url: track.url // для обратной совместимости
+        }));
+        localStorage.setItem('forsity_tracks', JSON.stringify(tracksToSave));
+        console.log('✅ Треки сохранены, количество:', tracks.length);
+    } catch (e) {
+        console.error('❌ Ошибка сохранения треков:', e);
+    }
+}
+
+function loadTracks() {
+    try {
+        const saved = localStorage.getItem('forsity_tracks');
+        if (saved) {
+            tracks = JSON.parse(saved).map((track, index) => ({
+                ...track,
+                year: track.year || '',
+                addedAt: track.addedAt || (Date.now() - index),
+                duration: Number(track.duration) || 0
+            }));
+            console.log('✅ Загружено треков из localStorage:', tracks.length);
+        } else {
+            tracks = [];
+            console.log('ℹ️ Нет сохранённых треков');
+        }
+    } catch (e) {
+        console.error('❌ Ошибка загрузки треков:', e);
+        tracks = [];
+    }
+    
+    updateTracklist();
+}
+
+// Загружаем треки при старте
+loadTracks();
 updatePlaylistsGrid();
 
 // ========== ФУНКЦИИ ДЛЯ РИСОВАНИЯ ==========
@@ -156,7 +212,8 @@ async function extractMetadata(file) {
                     const metadata = {
                         title: null,
                         artist: null,
-                        albumArt: null
+                        albumArt: null,
+                        year: ''
                     };
                     
                     if (tag.tags && tag.tags.title) {
@@ -167,6 +224,10 @@ async function extractMetadata(file) {
                         metadata.artist = tag.tags.artist;
                     }
                     
+                    if (tag.tags && tag.tags.year) {
+                        metadata.year = String(tag.tags.year);
+                    }
+
                     if (tag.tags && tag.tags.picture) {
                         const picture = tag.tags.picture;
                         const base64String = arrayBufferToBase64(picture.data);
@@ -175,15 +236,11 @@ async function extractMetadata(file) {
                     
                     resolve(metadata);
                 },
-                onError: (error) => {
-                    console.error('Error reading metadata:', error);
-                    resolve({ title: null, artist: null, albumArt: null });
-                }
+                onError: () => resolve({ title: null, artist: null, albumArt: null, year: '' })
             });
         });
     } catch (error) {
-        console.error('Error loading library:', error);
-        return { title: null, artist: null, albumArt: null };
+        return { title: null, artist: null, albumArt: null, year: '' };
     }
 }
 
@@ -232,10 +289,13 @@ fileInput.addEventListener('change', async (e) => {
         
         return {
             url: fileUrl,
+            file: file,
             title: metadata.title || fileName,
             artist: metadata.artist || '',
             albumArt: metadata.albumArt,
-            fileName: fileName
+            fileName: fileName,
+            year: metadata.year || '',
+            addedAt: Date.now()
         };
     });
     
@@ -308,22 +368,132 @@ function updatePendingTracksList() {
     });
 }
 
-confirmUploadBtn.addEventListener('click', () => {
-    // Добавляем все подтвержденные треки в начало основного списка (чтобы новые были сверху)
-    const newTracks = pendingTracks.map(track => ({
-        url: track.url,
-        title: track.title,
-        artist: track.artist,
-        albumArt: track.albumArt
-    }));
+function showLoading(message) {
+    const loader = document.createElement('div');
+    loader.id = 'global-loader';
+    loader.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        color: white;
+        font-size: 18px;
+        backdrop-filter: blur(5px);
+    `;
+    loader.innerHTML = `
+        <div style="text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 20px;">⏳</div>
+            <div>${message}</div>
+        </div>
+    `;
+    document.body.appendChild(loader);
+}
+
+function hideLoading() {
+    const loader = document.getElementById('global-loader');
+    if (loader) loader.remove();
+}
+
+// [ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ]
+confirmUploadBtn.addEventListener('click', async () => {
+    showLoading('Загрузка и сжатие треков...');
+    
+    let uploadedCount = 0;
+    const newTracks = [];
+    
+    for (const track of pendingTracks) {
+        try {
+            const formData = new FormData();
+            formData.append('audio', track.file);
+            formData.append('title', track.title);
+            formData.append('artist', track.artist);
+            
+            const response = await fetch(`${API_URL}/upload`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP ${response.status}`);
+            }
+            
+            const result = await response.json();
+            console.log('✅ Ответ от сервера:', result);
+            
+            if (!result.file || !result.file.path) {
+                console.error('❌ Сервер не вернул path!');
+                continue;
+            }
+            
+            newTracks.push({
+                path: result.file.path,
+                title: result.file.title,
+                artist: result.file.artist,
+                albumArt: track.albumArt,
+                year: track.year || '',
+                addedAt: track.addedAt || Date.now(),
+                duration: track.duration || 0,
+                url: track.url // сохраняем blob URL для немедленного воспроизведения
+            });
+            
+            uploadedCount++;
+            
+        } catch (error) {
+            console.error('❌ Ошибка загрузки трека:', error);
+        }
+    }
     
     tracks = [...newTracks, ...tracks];
-    
+    saveTracks();
     updateTracklist();
     uploadModal.classList.add('hidden');
+    hideLoading();
+    
+    if (uploadedCount > 0) {
+        alert(`Загружено ${uploadedCount} треков`);
+    }
 });
 
-// ========== ТРЕКЛИСТ ==========
+// [ТРЕКЛИСТ]
+function getTrackSortValue(track) {
+    return {
+        title: (track.title || '').toLowerCase(),
+        artist: (track.artist || '').toLowerCase(),
+        year: parseInt(track.year, 10) || 0,
+        addedAt: Number(track.addedAt) || 0
+    };
+}
+
+function getSortedTrackEntries() {
+    const entries = tracks.map((track, index) => ({ track, index }));
+
+    entries.sort((a, b) => {
+        const av = getTrackSortValue(a.track);
+        const bv = getTrackSortValue(b.track);
+
+        switch (currentTrackSort) {
+            case 'alpha':
+                return av.title.localeCompare(bv.title, 'ru');
+            case 'artist':
+                return av.artist.localeCompare(bv.artist, 'ru') || av.title.localeCompare(bv.title, 'ru');
+            case 'year_desc':
+                return bv.year - av.year || av.title.localeCompare(bv.title, 'ru');
+            case 'date_desc':
+            default:
+                return bv.addedAt - av.addedAt;
+        }
+    });
+
+    return entries;
+}
+
 function updateTracklist() {
     tracklist.innerHTML = '';
     
@@ -339,7 +509,7 @@ function updateTracklist() {
         return;
     }
     
-    tracks.forEach((track, index) => {
+    getSortedTrackEntries().forEach(({ track, index }) => {
         const li = document.createElement('li');
         li.className = 'tracklist-item';
         if (index === currentTrackIndex) {
@@ -367,12 +537,15 @@ function updateTracklist() {
             miniCoverHtml = canvas.outerHTML;
         }
         
+        const durationText = index === currentTrackIndex ? formatTime(audio.currentTime || 0) : formatTime(track.duration || 0);
+
         li.innerHTML = `
             ${miniCoverHtml}
             <div class="track-info">
                 <span class="track-title">${track.title || 'Без названия'}</span>
                 <span class="track-artist">${track.artist || ''}</span>
             </div>
+            <span class="track-duration" data-index="${index}">${durationText}</span>
             <button class="track-menu-btn">⋮</button>
         `;
         
@@ -388,7 +561,271 @@ function updateTracklist() {
     });
 }
 
-// ========== МЕНЮ ТРЕКА ==========
+function updateActiveTrackTimeInList() {
+    if (currentTrackIndex < 0 || !tracklist) return;
+    const durationEl = tracklist.querySelector(`.track-duration[data-index="${currentTrackIndex}"]`);
+    if (!durationEl) return;
+
+    if (isPlaying || audio.currentTime > 0) {
+        durationEl.textContent = formatTime(audio.currentTime || 0);
+    } else {
+        durationEl.textContent = formatTime((tracks[currentTrackIndex] && tracks[currentTrackIndex].duration) || 0);
+    }
+}
+
+function updateActiveTrackTimeInRecent() {
+    if (currentTrackIndex < 0 || !recentTracksList) return;
+    const durationEl = recentTracksList.querySelector(`.recent-track-time[data-index="${currentTrackIndex}"]`);
+    if (!durationEl) return;
+
+    if (isPlaying || audio.currentTime > 0) {
+        durationEl.textContent = formatTime(audio.currentTime || 0);
+    } else {
+        durationEl.textContent = formatTime((tracks[currentTrackIndex] && tracks[currentTrackIndex].duration) || 0);
+    }
+}
+
+function saveRecentTracks() {
+    localStorage.setItem('recent_tracks', JSON.stringify(recentTrackPaths));
+}
+
+function addTrackToRecent(track) {
+    if (!track || !track.path) return;
+    recentTrackPaths = recentTrackPaths.filter(path => path !== track.path);
+    recentTrackPaths.unshift(track.path);
+    recentTrackPaths = recentTrackPaths.slice(0, 20); // храним только 20 последних
+
+    saveRecentTracks();
+    updateRecentTracksList();
+}
+
+function updateRecentTracksList() {
+    if (!recentTracksList) return;
+    recentTracksList.innerHTML = '';
+
+    const recentTracks = recentTrackPaths
+        .map(path => tracks.find(track => track.path === path))
+        .filter(Boolean);
+
+    if (recentTracks.length === 0) {
+        const li = document.createElement('li');
+        li.textContent = 'Пока нет недавно прослушанных треков';
+        li.style.color = '#8f9ab3';
+        li.style.padding = '12px 0';
+        recentTracksList.appendChild(li);
+        return;
+    }
+
+    recentTracks.forEach((track) => {
+        const index = tracks.findIndex(t => t.path === track.path);
+        if (index === -1) return;
+
+        const li = document.createElement('li');
+        li.className = 'recent-track-item';
+
+        let coverHtml = '';
+        if (track.albumArt) {
+            const img = document.createElement('img');
+            img.className = 'track-mini-cover';
+            img.src = track.albumArt;
+            coverHtml = img.outerHTML;
+        } else {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'track-mini-cover';
+            canvas.width = 32;
+            canvas.height = 32;
+            const miniCtx = canvas.getContext('2d');
+            const gradient = miniCtx.createLinearGradient(0, 0, 32, 32);
+            gradient.addColorStop(0, '#32007d');
+            gradient.addColorStop(1, '#000000');
+            miniCtx.fillStyle = gradient;
+            miniCtx.fillRect(0, 0, 32, 32);
+            coverHtml = canvas.outerHTML;
+        }
+
+        const durationText = index === currentTrackIndex ? formatTime(audio.currentTime || 0) : formatTime(track.duration || 0);
+
+        li.innerHTML = `
+            ${coverHtml}
+            <div class="track-info">
+                <span class="track-title">${track.title || 'Без названия'}</span>
+                <span class="track-artist">${track.artist || ''}</span>
+            </div>
+            <span class="recent-track-time" data-index="${index}">${durationText}</span>
+        `;
+
+        li.addEventListener('click', () => playTrack(index));
+        recentTracksList.appendChild(li);
+    });
+}
+
+function renderSearchList(listElement, items, { clickable = false } = {}) {
+    if (!listElement) return;
+    listElement.innerHTML = '';
+
+    if (!items || items.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'search-item empty';
+        li.textContent = 'Ничего не найдено';
+        listElement.appendChild(li);
+        return;
+    }
+
+    items.forEach((item) => {
+        const li = document.createElement('li');
+        li.className = 'search-item';
+        li.innerHTML = `
+            <span class="search-title">${item.title || 'Без названия'}</span>
+            <span class="search-artist">${item.artist || ''}</span>
+        `;
+
+        if (clickable && Number.isInteger(item.index)) {
+            li.addEventListener('click', () => playTrack(item.index));
+        }
+
+        listElement.appendChild(li);
+    });
+}
+
+async function fetchRemoteTracksByTitle(query) {
+    try {
+        const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=20`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return (data.results || []).map((item) => ({
+            title: item.trackName || 'Без названия',
+            artist: item.artistName || ''
+        }));
+    } catch (e) {
+        return [];
+    }
+}
+
+async function handleTrackSearch() {
+    if (!trackSearchInput || !searchResults) return;
+
+    const query = trackSearchInput.value.trim().toLowerCase();
+
+    if (!query) {
+        searchResults.classList.add('hidden');
+        if (localSearchResults) localSearchResults.innerHTML = '';
+        if (remoteSearchResults) remoteSearchResults.innerHTML = '';
+        return;
+    }
+
+    const localMatches = tracks
+        .map((track, index) => ({ ...track, index }))
+        .filter((track) => (track.title || '').toLowerCase().includes(query));
+
+    const remoteMatchesRaw = await fetchRemoteTracksByTitle(query);
+    const localKey = new Set(localMatches.map((t) => `${(t.title || '').toLowerCase()}::${(t.artist || '').toLowerCase()}`));
+    const remoteMatches = remoteMatchesRaw.filter((t) => !localKey.has(`${(t.title || '').toLowerCase()}::${(t.artist || '').toLowerCase()}`));
+
+    renderSearchList(localSearchResults, localMatches, { clickable: true });
+    renderSearchList(remoteSearchResults, remoteMatches);
+
+    searchResults.classList.remove('hidden');
+}
+
+function initTrackSearch() {
+    if (!trackSearchInput) return;
+
+    trackSearchInput.addEventListener('input', () => {
+        clearTimeout(trackSearchTimer);
+        trackSearchTimer = setTimeout(() => {
+            handleTrackSearch();
+        }, 250);
+    });
+}
+
+// [ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ]
+function playTrack(index) {
+    if (index >= 0 && index < tracks.length) {
+        audio.pause();
+        
+        currentTrackIndex = index;
+        addTrackToRecent(tracks[index]);
+        
+        // Если есть path, стримим с сервера, если нет - используем blob URL
+        if (tracks[index].path) {
+            const encodedPath = encodeURIComponent(tracks[index].path);
+            const streamUrl = `${API_URL}/stream/${encodedPath}`;
+            console.log('▶️ Стриминг с сервера:', streamUrl);
+            audio.src = streamUrl;
+        } else if (tracks[index].url) {
+            console.log('▶️ Локальное воспроизведение');
+            audio.src = tracks[index].url;
+        } else {
+            console.error('❌ Нет источника для воспроизведения');
+            return;
+        }
+        
+        audio.load();
+        
+        if (shuffleMode) {
+            shuffledIndices = shuffledIndices.filter(i => i !== index);
+        }
+        
+        audio.onerror = function(e) {
+            console.error('❌ Audio error:', e);
+            console.error('❌ Audio error code:', audio.error ? audio.error.code : 'unknown');
+            console.error('❌ Audio error message:', audio.error ? audio.error.message : 'unknown');
+            isPlaying = false;
+            updatePlayPauseButton();
+        };
+        
+        audio.oncanplay = function() {
+            console.log('✅ Можно воспроизводить');
+            audio.play().then(() => {
+                console.log('✅ Воспроизведение успешно');
+                isPlaying = true;
+                updatePlayPauseButton();
+                updateTracklist();
+                updateAlbumArt(tracks[currentTrackIndex]);
+                
+                if (!isEQInitialized) {
+                    setTimeout(() => {
+                        initEQ();
+                    }, 200);
+                }
+                
+            }).catch(error => {
+                console.error('❌ Play error:', error);
+                isPlaying = false;
+                updatePlayPauseButton();
+            });
+        };
+        
+        audio.onplaying = function() {
+            console.log('▶️ Воспроизведение началось');
+            isPlaying = true;
+            updatePlayPauseButton();
+        };
+    }
+}
+
+// [ПРОВЕРКА ФАЙЛА ПЕРЕД ВОСПРОИЗВЕДЕНИЕМ]
+async function checkTrackBeforePlay(index) {
+    if (!tracks[index] || !tracks[index].path) return false;
+    
+    try {
+        const response = await fetch(`${API_URL}/check/${encodeURIComponent(tracks[index].path)}`);
+        const data = await response.json();
+        
+        if (data.exists) {
+            console.log('✅ Файл существует на Яндекс.Диске:', data);
+            return true;
+        } else {
+            console.error('❌ Файл не найден на Яндекс.Диске:', data);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Ошибка проверки файла:', error);
+        return false;
+    }
+}
+
+// [МЕНЮ ТРЕКА]
 function openTrackMenu(trackIndex) {
     currentTrackForMenu = trackIndex;
     trackMenu.classList.remove('hidden');
@@ -480,7 +917,7 @@ function addTrackToPlaylist(playlistId) {
     
     const track = tracks[currentTrackForMenu];
     
-    if (!playlist.tracks.some(t => t.url === track.url)) {
+    if (!playlist.tracks.some(t => t.path === track.path)) {
         playlist.tracks.push({...track});
         localStorage.setItem('playlists', JSON.stringify(playlists));
         updatePlaylistsGrid();
@@ -489,45 +926,68 @@ function addTrackToPlaylist(playlistId) {
     playlistChoiceMenu.classList.add('hidden');
 }
 
-// ========== УДАЛЕНИЕ ТРЕКА ==========
-deleteTrackBtn.addEventListener('click', () => {
+// [УДАЛЕНИЕ ТРЕКА]
+async function deleteTrackByMenu({ deleteFromCloud }) {
     if (currentTrackForMenu === null) return;
-    
+
     const trackToDelete = tracks[currentTrackForMenu];
-    
+
+    if (deleteFromCloud && trackToDelete.path) {
+        try {
+            await fetch(`${API_URL}/track/${encodeURIComponent(trackToDelete.path)}`, {
+                method: 'DELETE'
+            });
+            console.log('✅ Трек удалён с Яндекс.Диска');
+        } catch (error) {
+            console.error('Ошибка удаления с Яндекс.Диска:', error);
+        }
+    }
+
     // Удаляем трек из всех плейлистов
     playlists.forEach(playlist => {
-        playlist.tracks = playlist.tracks.filter(t => t.url !== trackToDelete.url);
+        playlist.tracks = playlist.tracks.filter(t => t.path !== trackToDelete.path);
     });
     localStorage.setItem('playlists', JSON.stringify(playlists));
-    
-    // Очищаем временный URL
+
+    recentTrackPaths = recentTrackPaths.filter(path => path !== trackToDelete.path);
+    saveRecentTracks();
+
+    // Очищаем временный URL если есть
     if (trackToDelete.url && trackToDelete.url.startsWith('blob:')) {
         URL.revokeObjectURL(trackToDelete.url);
     }
-    
-    // Удаляем трек из основного списка
+
     tracks.splice(currentTrackForMenu, 1);
-    
+    saveTracks();
+
     // Если удаляли текущий играющий трек
     if (currentTrackIndex === currentTrackForMenu) {
         audio.pause();
         isPlaying = false;
-        playPauseBtn.textContent = '▶️';
+        updatePlayPauseButton();
         currentTrackIndex = -1;
         updateAlbumArt(null);
         progressBar.value = 0;
-        timeDisplay.textContent = '0:00 / 0:00';
+        timeDisplay.textContent = '0:00';
     } else if (currentTrackIndex > currentTrackForMenu) {
         // Если удаляли трек до текущего, сдвигаем индекс
         currentTrackIndex--;
     }
-    
+
     updateTracklist();
+    updateRecentTracksList();
     updatePlaylistsGrid();
     trackMenu.classList.add('hidden');
     currentTrackForMenu = null;
-});
+}
+
+if (deleteTrackLocalBtn) {
+    deleteTrackLocalBtn.addEventListener('click', () => deleteTrackByMenu({ deleteFromCloud: false }));
+}
+
+if (deleteTrackCloudBtn) {
+    deleteTrackCloudBtn.addEventListener('click', () => deleteTrackByMenu({ deleteFromCloud: true }));
+}
 
 // ========== ПЛЕЙЛИСТЫ ==========
 function updatePlaylistsGrid() {
@@ -621,6 +1081,7 @@ function openPlaylistEditor(playlistId = null) {
         playlistModalTitle.textContent = 'Создать плейлист';
         playlistNameInput.value = '';
         playlistDescInput.value = '';
+        draftPlaylistTracks = [];
         drawGradientAlbumArt(playlistCoverEdit);
         deletePlaylistBtn.classList.add('hidden');
     }
@@ -680,14 +1141,12 @@ function updateAvailableTracksList() {
         
         const addBtn = trackDiv.querySelector('.add-to-playlist');
         
-        if (currentPlaylistId) {
-            const playlist = playlists.find(p => p.id === currentPlaylistId);
-            if (playlist) {
-                const isInPlaylist = playlist.tracks.some(t => t.url === track.url);
-                if (isInPlaylist) {
-                    addBtn.style.display = 'none';
-                }
-            }
+        const isInPlaylist = currentPlaylistId
+            ? ((playlists.find(p => p.id === currentPlaylistId)?.tracks || []).some(t => t.path === track.path))
+            : draftPlaylistTracks.some(t => t.path === track.path);
+
+        if (isInPlaylist) {
+            addBtn.style.display = 'none';
         }
         
         addBtn.addEventListener('click', (e) => {
@@ -696,7 +1155,7 @@ function updateAvailableTracksList() {
         });
         
         trackDiv.addEventListener('click', () => {
-            const trackIndex = tracks.findIndex(t => t.url === track.url);
+            const trackIndex = tracks.findIndex(t => t.path === track.path);
             if (trackIndex !== -1) {
                 playTrack(trackIndex);
             }
@@ -707,17 +1166,13 @@ function updateAvailableTracksList() {
 }
 
 function updatePlaylistTracksList() {
-    if (!currentPlaylistId) {
-        playlistTracksList.innerHTML = '';
-        return;
-    }
-    
-    const playlist = playlists.find(p => p.id === currentPlaylistId);
-    if (!playlist) return;
-    
+    const playlistTracks = currentPlaylistId
+        ? (playlists.find(p => p.id === currentPlaylistId)?.tracks || [])
+        : draftPlaylistTracks;
+
     playlistTracksList.innerHTML = '';
-    
-    playlist.tracks.forEach((track, index) => {
+
+    playlistTracks.forEach((track, index) => {
         const trackDiv = document.createElement('div');
         trackDiv.className = 'playlist-track-item';
         
@@ -758,7 +1213,7 @@ function updatePlaylistTracksList() {
         });
         
         trackDiv.addEventListener('click', () => {
-            const trackIndex = tracks.findIndex(t => t.url === track.url);
+            const trackIndex = tracks.findIndex(t => t.path === track.path);
             if (trackIndex !== -1) {
                 playTrack(trackIndex);
             }
@@ -769,31 +1224,39 @@ function updatePlaylistTracksList() {
 }
 
 function addTrackToCurrentPlaylist(track) {
-    if (!currentPlaylistId) return;
-    
-    const playlist = playlists.find(p => p.id === currentPlaylistId);
-    if (!playlist) return;
-    
-    if (!playlist.tracks.some(t => t.url === track.url)) {
-        playlist.tracks.push({...track});
-        localStorage.setItem('playlists', JSON.stringify(playlists));
-        updateAvailableTracksList();
-        updatePlaylistTracksList();
-        updatePlaylistsGrid();
+    if (currentPlaylistId) {
+        const playlist = playlists.find(p => p.id === currentPlaylistId);
+        if (!playlist) return;
+
+        if (!playlist.tracks.some(t => t.path === track.path)) {
+            playlist.tracks.push({...track});
+            localStorage.setItem('playlists', JSON.stringify(playlists));
+            updatePlaylistsGrid();
+        }
+    } else {
+        if (!draftPlaylistTracks.some(t => t.path === track.path)) {
+            draftPlaylistTracks.push({ ...track });
+        }
     }
+
+    updateAvailableTracksList();
+    updatePlaylistTracksList();
 }
 
 function removeTrackFromCurrentPlaylist(trackIndex) {
-    if (!currentPlaylistId) return;
-    
-    const playlist = playlists.find(p => p.id === currentPlaylistId);
-    if (!playlist) return;
-    
-    playlist.tracks.splice(trackIndex, 1);
-    localStorage.setItem('playlists', JSON.stringify(playlists));
+    if (currentPlaylistId) {
+        const playlist = playlists.find(p => p.id === currentPlaylistId);
+        if (!playlist) return;
+
+        playlist.tracks.splice(trackIndex, 1);
+        localStorage.setItem('playlists', JSON.stringify(playlists));
+        updatePlaylistsGrid();
+    } else {
+        draftPlaylistTracks.splice(trackIndex, 1);
+    }
+
     updateAvailableTracksList();
     updatePlaylistTracksList();
-    updatePlaylistsGrid();
 }
 
 savePlaylistBtn.addEventListener('click', () => {
@@ -815,7 +1278,7 @@ savePlaylistBtn.addEventListener('click', () => {
             id: Date.now().toString(),
             name: name,
             desc: desc,
-            tracks: [],
+            tracks: draftPlaylistTracks,
             cover: null,
             createdAt: new Date().toISOString()
         };
@@ -945,41 +1408,9 @@ function getPrevTrackIndex() {
     return -1;
 }
 
-function playTrack(index) {
-    if (index >= 0 && index < tracks.length) {
-        audio.pause();
-        
-        currentTrackIndex = index;
-        audio.src = tracks[index].url;
-        
-        if (shuffleMode) {
-            shuffledIndices = shuffledIndices.filter(i => i !== index);
-        }
-        
-        audio.onerror = function(e) {
-            console.error('Audio error:', e);
-            isPlaying = false;
-            if (playPauseBtn) playPauseBtn.textContent = '▶️';
-        };
-        
-        audio.play().then(() => {
-            isPlaying = true;
-            if (playPauseBtn) playPauseBtn.textContent = '⏸️';
-            updateTracklist();
-            updateAlbumArt(tracks[currentTrackIndex]);
-            
-            if (!isEQInitialized) {
-                setTimeout(() => {
-                    initEQ();
-                }, 200);
-            }
-            
-        }).catch(error => {
-            console.error('Play error:', error);
-            isPlaying = false;
-            if (playPauseBtn) playPauseBtn.textContent = '▶️';
-        });
-    }
+function updatePlayPauseButton() {
+    if (!playPauseBtn) return;
+    playPauseBtn.textContent = isPlaying ? '⏸️' : '▶️';
 }
 
 function togglePlay() {
@@ -987,15 +1418,15 @@ function togglePlay() {
     
     if (isPlaying) {
         audio.pause();
-        if (playPauseBtn) playPauseBtn.textContent = '▶️';
         isPlaying = false;
+        updatePlayPauseButton();
     } else {
         if (currentTrackIndex === -1) {
             playTrack(0);
         } else {
             audio.play().then(() => {
-                if (playPauseBtn) playPauseBtn.textContent = '⏸️';
                 isPlaying = true;
+                updatePlayPauseButton();
             }).catch(error => {
                 console.error('Play error:', error);
             });
@@ -1288,13 +1719,17 @@ progressBar.addEventListener('input', () => {
     if (audio.duration && !isNaN(audio.duration)) {
         audio.currentTime = (progressBar.value / 100) * audio.duration;
     }
+    refreshProgressFill();
 });
 
 audio.addEventListener('timeupdate', () => {
     if (audio.duration && !isNaN(audio.duration) && progressBar && timeDisplay) {
         const progress = (audio.currentTime / audio.duration) * 100;
         progressBar.value = progress;
-        timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+        refreshProgressFill();
+        timeDisplay.textContent = `${formatTime(audio.currentTime)}`;
+        updateActiveTrackTimeInList();
+        updateActiveTrackTimeInRecent();
     }
 });
 
@@ -1305,10 +1740,10 @@ audio.addEventListener('ended', () => {
         playTrack(nextIndex);
     } else {
         isPlaying = false;
-        if (playPauseBtn) playPauseBtn.textContent = '▶️';
+        updatePlayPauseButton();
         currentTrackIndex = -1;
-        if (progressBar) progressBar.value = 0;
-        if (timeDisplay) timeDisplay.textContent = '0:00 / 0:00';
+        if (progressBar) { progressBar.value = 0; refreshProgressFill(); }
+        if (timeDisplay) timeDisplay.textContent = '0:00';
         updateTracklist();
         updateAlbumArt(null);
     }
@@ -1316,11 +1751,35 @@ audio.addEventListener('ended', () => {
 
 audio.addEventListener('loadedmetadata', () => {
     if (timeDisplay) {
-        timeDisplay.textContent = `0:00 / ${formatTime(audio.duration)}`;
+        timeDisplay.textContent = '0:00';
+    }
+
+    if (currentTrackIndex >= 0 && tracks[currentTrackIndex]) {
+        tracks[currentTrackIndex].duration = Number(audio.duration) || 0;
+        saveTracks();
+        updateTracklist();
     }
 });
 
-// ========== ГРОМКОСТЬ ==========
+function paintRangeFill(input, percent, activeColor = '#6d26ff', baseColor = '#1c2230') {
+    if (!input) return;
+    const p = Math.max(0, Math.min(100, percent));
+    input.style.background = `linear-gradient(to right, ${activeColor} 0%, ${activeColor} ${p}%, ${baseColor} ${p}%, ${baseColor} 100%)`;
+}
+
+function refreshProgressFill() {
+    if (!progressBar) return;
+    const percent = Number(progressBar.value || 0);
+    paintRangeFill(progressBar, percent, '#6d26ff', '#1a1f2d');
+}
+
+function refreshVolumeFill() {
+    if (!volumeSlider) return;
+    const percent = Number(volumeSlider.value || 0);
+    paintRangeFill(volumeSlider, percent, '#6d26ff', '#1a1f2d');
+}
+
+// [ГРОМКОСТЬ]
 function initVolume() {
     if (!volumeSlider || !volumePercent || !volumeIcon) return;
     
@@ -1335,12 +1794,14 @@ function initVolume() {
     volumeSlider.value = startVolume;
     volumePercent.textContent = startVolume + '%';
     updateVolumeIcon(startVolume);
+    refreshVolumeFill();
     
     volumeSlider.addEventListener('input', function(e) {
         const volume = parseInt(e.target.value);
         audio.volume = volume / 100;
         volumePercent.textContent = volume + '%';
         updateVolumeIcon(volume);
+        refreshVolumeFill();
         localStorage.setItem('volume', volume);
     });
 }
@@ -1360,8 +1821,23 @@ document.addEventListener('DOMContentLoaded', function() {
     initEQSliders();
     updateModeButtons();
     updateAlbumArt(null);
+    updateRecentTracksList();
+    initTrackSearch();
+    refreshProgressFill();
+    refreshVolumeFill();
+
+    if (trackSortSelect) {
+        trackSortSelect.value = currentTrackSort;
+        trackSortSelect.addEventListener('change', (e) => {
+            currentTrackSort = e.target.value;
+            localStorage.setItem('track_sort', currentTrackSort);
+            updateTracklist();
+        });
+    }
     
-    tg.ready();
+    if (tg) {
+        tg.ready();
+    }
 });
 
 // Очистка временных ссылок при закрытии
