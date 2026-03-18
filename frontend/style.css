@@ -2697,19 +2697,19 @@ body,
 }
 
 .recent-tracks-list {
-  grid-auto-columns: minmax(232px, 232px) !important;
+  grid-auto-columns: minmax(220px, 220px) !important;
 }
 
 .recent-track-item {
-  grid-template-columns: 48px minmax(0, 1fr) auto !important;
+  grid-template-columns: 46px minmax(0, 1fr) auto !important;
   gap: 12px !important;
-  min-height: 62px !important;
+  min-height: 60px !important;
 }
 
 .recent-track-item .track-mini-cover {
   display: block !important;
-  width: 48px !important;
-  height: 48px !important;
+  width: 46px !important;
+  height: 46px !important;
   grid-column: 1 !important;
 }
 
@@ -2742,26 +2742,12 @@ body,
 
 .playlist-square {
   align-self: center !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
 }
 
 .center-progress-zone {
   display: flex;
   flex-direction: column;
   justify-content: center;
-}
-
-.center-progress-zone > .current-track-info {
-  order: 1;
-}
-
-.center-progress-zone > .time-display {
-  order: 2;
-}
-
-.center-progress-zone > .progress-bar {
-  order: 3;
 }
 
 .center-progress-zone > .time-display,
