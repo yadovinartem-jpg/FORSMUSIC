@@ -33,22 +33,11 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Range'],
-  exposedHeaders: ['Content-Length', 'Content-Range', 'Accept-Ranges']
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.options('*', cors());
 app.use(express.json());
-
-// ========== ДОПОЛНИТЕЛЬНЫЕ CORS-ЗАГОЛОВКИ ==========
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Range, Authorization');
-  res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
-  next();
-});
 
 // ========== MULTER ==========
 const upload = multer({ 
@@ -92,15 +81,10 @@ async function publishFile(remotePath) {
 }
 
 async function getFileInfo(remotePath) {
-  try {
-    const response = await yandexApi.get('/resources', {
-      params: { path: remotePath }
-    });
-    return response.data;
-  } catch (error) {
-    console.error('❌ Ошибка получения информации о файле:', error.response?.data || error.message);
-    throw error;
-  }
+  const response = await yandexApi.get('/resources', {
+    params: { path: remotePath }
+  });
+  return response.data;
 }
 
 async function deleteFile(remotePath) {
@@ -111,15 +95,10 @@ async function deleteFile(remotePath) {
 }
 
 async function getDownloadLink(remotePath) {
-  try {
-    const response = await yandexApi.get('/resources/download', {
-      params: { path: remotePath }
-    });
-    return response.data.href;
-  } catch (error) {
-    console.error('❌ Ошибка получения ссылки на скачивание:', error.response?.data || error.message);
-    throw error;
-  }
+  const response = await yandexApi.get('/resources/download', {
+    params: { path: remotePath }
+  });
+  return response.data.href;
 }
 
 async function uploadToYandex(fileBuffer, fileName) {
@@ -164,7 +143,6 @@ function compressAudio(inputBuffer, inputFormat) {
         const compressedBuffer = fs.readFileSync(outputPath);
         fs.unlinkSync(inputPath);
         fs.unlinkSync(outputPath);
-        console.log(`✅ Сжато: ${inputBuffer.length} → ${compressedBuffer.length} байт`);
         resolve(compressedBuffer);
       })
       .on('error', (err) => {
@@ -202,12 +180,11 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
         path: yandexFile.path,
         title: title || req.file.originalname,
         artist: artist || 'Unknown',
-        format: 'opus',
-        size: yandexFile.size
+        format: 'opus'
       }
     });
     
-    console.log('✅ Загрузка завершена, путь:', yandexFile.path);
+    console.log('✅ Загрузка завершена');
     
   } catch (error) {
     console.error('❌ Ошибка загрузки:', error);
@@ -218,7 +195,7 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   }
 });
 
-// ========== СТРИМИНГ ==========
+// ========== ПРОСТОЙ И НАДЁЖНЫЙ СТРИМИНГ ==========
 app.get('/api/stream/:path(*)', async (req, res) => {
   try {
     const remotePath = decodeURIComponent(req.params.path);
@@ -231,7 +208,7 @@ app.get('/api/stream/:path(*)', async (req, res) => {
     
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
     
     const response = await axios({
@@ -248,56 +225,14 @@ app.get('/api/stream/:path(*)', async (req, res) => {
     response.data.pipe(res);
     
     response.data.on('error', (err) => {
-      console.error('❌ Ошибка потока:', err);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Stream error' });
-      }
+      console.error('❌ Ошибка потока:', err.message);
     });
     
   } catch (error) {
-    console.error('❌ Ошибка стриминга:', error);
+    console.error('❌ Ошибка стриминга:', error.message);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Streaming failed' });
     }
-  }
-});
-
-// Обработка preflight OPTIONS запросов для стриминга
-app.options('/api/stream/:path(*)', (req, res) => {
-  res.header('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Range');
-  res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
-  res.header('Access-Control-Max-Age', '86400');
-  res.sendStatus(204);
-});
-
-// ========== ПРОВЕРКА ФАЙЛА (ДЛЯ ОТЛАДКИ) ==========
-app.get('/api/check/:path(*)', async (req, res) => {
-  try {
-    const remotePath = decodeURIComponent(req.params.path);
-    console.log('🔍 Проверка файла:', remotePath);
-    
-    try {
-      const fileInfo = await getFileInfo(remotePath);
-      res.json({
-        exists: true,
-        path: remotePath,
-        name: fileInfo.name,
-        public_url: fileInfo.public_url,
-        mime_type: fileInfo.mime_type,
-        size: fileInfo.size
-      });
-    } catch (error) {
-      res.json({
-        exists: false,
-        path: remotePath,
-        error: error.response?.data?.message || error.message
-      });
-    }
-  } catch (error) {
-    res.status(500).json({ error: 'Check failed', details: error.message });
   }
 });
 
