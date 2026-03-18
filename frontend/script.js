@@ -554,20 +554,6 @@ function updateActiveTrackTimeInRecent() {
     if (currentTrackIndex < 0 || !recentTracksList) return;
     const durationEl = recentTracksList.querySelector(`.recent-track-time[data-index="${currentTrackIndex}"]`);
     if (!durationEl) return;
-function updateActiveTrackTimeInList() {
-    if (currentTrackIndex < 0 || !tracklist) return;
-    const durationEl = tracklist.querySelector(`.track-duration[data-index="${currentTrackIndex}"]`);
-    if (!durationEl) return;
-    if (isPlaying || audio.currentTime > 0) {
-        durationEl.textContent = formatTime(audio.currentTime || 0);
-    } else {
-        durationEl.textContent = formatTime((tracks[currentTrackIndex] && tracks[currentTrackIndex].duration) || 0);
-    }
-}
-function updateActiveTrackTimeInRecent() {
-    if (currentTrackIndex < 0 || !recentTracksList) return;
-    const durationEl = recentTracksList.querySelector(`.recent-track-time[data-index="${currentTrackIndex}"]`);
-    if (!durationEl) return;
 
     if (isPlaying || audio.currentTime > 0) {
         durationEl.textContent = formatTime(audio.currentTime || 0);
@@ -575,7 +561,6 @@ function updateActiveTrackTimeInRecent() {
         durationEl.textContent = formatTime((tracks[currentTrackIndex] && tracks[currentTrackIndex].duration) || 0);
     }
 }
-
 function saveRecentTracks() {
     localStorage.setItem('recent_tracks', JSON.stringify(recentTrackPaths));
 }
@@ -645,85 +630,6 @@ function updateRecentTracksList() {
         recentTracksList.appendChild(li);
     });
 }
-function renderSearchList(listElement, items, { clickable = false } = {}) {
-    if (!listElement) return;
-    listElement.innerHTML = '';
-
-    if (!items || items.length === 0) {
-        const li = document.createElement('li');
-        li.className = 'search-item empty';
-        li.textContent = 'Ничего не найдено';
-        listElement.appendChild(li);
-        return;
-    }
-
-    items.forEach((item) => {
-        const li = document.createElement('li');
-        li.className = 'search-item';
-        li.innerHTML = `
-            <span class="search-title">${item.title || 'Без названия'}</span>
-            <span class="search-artist">${item.artist || ''}</span>
-        `;
-
-        if (clickable && Number.isInteger(item.index)) {
-            li.addEventListener('click', () => playTrack(item.index));
-        }
-
-        listElement.appendChild(li);
-    });
-}
-
-async function fetchRemoteTracksByTitle(query) {
-    try {
-        const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=20`);
-        if (!response.ok) return [];
-        const data = await response.json();
-        return (data.results || []).map((item) => ({
-            title: item.trackName || 'Без названия',
-            artist: item.artistName || ''
-        }));
-    } catch (e) {
-        return [];
-    }
-}
-
-async function handleTrackSearch() {
-    if (!trackSearchInput || !searchResults) return;
-
-    const query = trackSearchInput.value.trim().toLowerCase();
-
-    if (!query) {
-        searchResults.classList.add('hidden');
-        if (localSearchResults) localSearchResults.innerHTML = '';
-        if (remoteSearchResults) remoteSearchResults.innerHTML = '';
-        return;
-    }
-
-    const localMatches = tracks
-        .map((track, index) => ({ ...track, index }))
-        .filter((track) => (track.title || '').toLowerCase().includes(query));
-
-    const remoteMatchesRaw = await fetchRemoteTracksByTitle(query);
-    const localKey = new Set(localMatches.map((t) => `${(t.title || '').toLowerCase()}::${(t.artist || '').toLowerCase()}`));
-    const remoteMatches = remoteMatchesRaw.filter((t) => !localKey.has(`${(t.title || '').toLowerCase()}::${(t.artist || '').toLowerCase()}`));
-
-    renderSearchList(localSearchResults, localMatches, { clickable: true });
-    renderSearchList(remoteSearchResults, remoteMatches);
-
-    searchResults.classList.remove('hidden');
-}
-
-function initTrackSearch() {
-    if (!trackSearchInput) return;
-
-    trackSearchInput.addEventListener('input', () => {
-        clearTimeout(trackSearchTimer);
-        trackSearchTimer = setTimeout(() => {
-            handleTrackSearch();
-        }, 250);
-    });
-}
-
 function renderSearchList(listElement, items, { clickable = false } = {}) {
     if (!listElement) return;
     listElement.innerHTML = '';
