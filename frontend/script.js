@@ -444,6 +444,7 @@ function getSortedTrackEntries() {
 
         switch (currentTrackSort) {
             case 'alpha':
+            case 'title':
                 return av.title.localeCompare(bv.title, 'ru');
             case 'artist':
                 return av.artist.localeCompare(bv.artist, 'ru') || av.title.localeCompare(bv.title, 'ru');
@@ -538,8 +539,6 @@ function updateTracklist() {
         tracklist.appendChild(li);
     });
 }
-
-
 function updateActiveTrackTimeInList() {
     if (currentTrackIndex < 0 || !tracklist) return;
     const durationEl = tracklist.querySelector(`.track-duration[data-index="${currentTrackIndex}"]`);
@@ -551,7 +550,20 @@ function updateActiveTrackTimeInList() {
         durationEl.textContent = formatTime((tracks[currentTrackIndex] && tracks[currentTrackIndex].duration) || 0);
     }
 }
-
+function updateActiveTrackTimeInRecent() {
+    if (currentTrackIndex < 0 || !recentTracksList) return;
+    const durationEl = recentTracksList.querySelector(`.recent-track-time[data-index="${currentTrackIndex}"]`);
+    if (!durationEl) return;
+function updateActiveTrackTimeInList() {
+    if (currentTrackIndex < 0 || !tracklist) return;
+    const durationEl = tracklist.querySelector(`.track-duration[data-index="${currentTrackIndex}"]`);
+    if (!durationEl) return;
+    if (isPlaying || audio.currentTime > 0) {
+        durationEl.textContent = formatTime(audio.currentTime || 0);
+    } else {
+        durationEl.textContent = formatTime((tracks[currentTrackIndex] && tracks[currentTrackIndex].duration) || 0);
+    }
+}
 function updateActiveTrackTimeInRecent() {
     if (currentTrackIndex < 0 || !recentTracksList) return;
     const durationEl = recentTracksList.querySelector(`.recent-track-time[data-index="${currentTrackIndex}"]`);
@@ -563,7 +575,7 @@ function updateActiveTrackTimeInRecent() {
         durationEl.textContent = formatTime((tracks[currentTrackIndex] && tracks[currentTrackIndex].duration) || 0);
     }
 }
-
+ main
 function saveRecentTracks() {
     localStorage.setItem('recent_tracks', JSON.stringify(recentTrackPaths));
 }
@@ -600,7 +612,6 @@ function updateRecentTracksList() {
 
         const li = document.createElement('li');
         li.className = 'recent-track-item';
-
         let coverHtml = '';
         if (track.albumArt) {
             const img = document.createElement('img');
@@ -622,9 +633,7 @@ function updateRecentTracksList() {
         }
 
         const durationText = index === currentTrackIndex ? formatTime(audio.currentTime || 0) : formatTime(track.duration || 0);
-
         li.innerHTML = `
-            ${coverHtml}
             <div class="track-info">
                 <span class="track-title">${track.title || 'Без названия'}</span>
                 <span class="track-artist">${track.artist || ''}</span>
@@ -634,6 +643,242 @@ function updateRecentTracksList() {
 
         li.addEventListener('click', () => playTrack(index));
         recentTracksList.appendChild(li);
+    });
+}
+function renderSearchList(listElement, items, { clickable = false } = {}) {
+    if (!listElement) return;
+    listElement.innerHTML = '';
+
+    if (!items || items.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'search-item empty';
+        li.textContent = 'Ничего не найдено';
+        listElement.appendChild(li);
+        return;
+    }
+
+    items.forEach((item) => {
+        const li = document.createElement('li');
+        li.className = 'search-item';
+        li.innerHTML = `
+            <span class="search-title">${item.title || 'Без названия'}</span>
+            <span class="search-artist">${item.artist || ''}</span>
+        `;
+
+        if (clickable && Number.isInteger(item.index)) {
+            li.addEventListener('click', () => playTrack(item.index));
+        }
+
+        listElement.appendChild(li);
+    });
+}
+
+async function fetchRemoteTracksByTitle(query) {
+    try {
+        const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=20`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return (data.results || []).map((item) => ({
+            title: item.trackName || 'Без названия',
+            artist: item.artistName || ''
+        }));
+    } catch (e) {
+        return [];
+    }
+}
+
+async function handleTrackSearch() {
+    if (!trackSearchInput || !searchResults) return;
+
+    const query = trackSearchInput.value.trim().toLowerCase();
+
+    if (!query) {
+        searchResults.classList.add('hidden');
+        if (localSearchResults) localSearchResults.innerHTML = '';
+        if (remoteSearchResults) remoteSearchResults.innerHTML = '';
+        return;
+    }
+
+    const localMatches = tracks
+        .map((track, index) => ({ ...track, index }))
+        .filter((track) => (track.title || '').toLowerCase().includes(query));
+
+    const remoteMatchesRaw = await fetchRemoteTracksByTitle(query);
+    const localKey = new Set(localMatches.map((t) => `${(t.title || '').toLowerCase()}::${(t.artist || '').toLowerCase()}`));
+    const remoteMatches = remoteMatchesRaw.filter((t) => !localKey.has(`${(t.title || '').toLowerCase()}::${(t.artist || '').toLowerCase()}`));
+
+    renderSearchList(localSearchResults, localMatches, { clickable: true });
+    renderSearchList(remoteSearchResults, remoteMatches);
+
+    searchResults.classList.remove('hidden');
+}
+
+function initTrackSearch() {
+    if (!trackSearchInput) return;
+
+    trackSearchInput.addEventListener('input', () => {
+        clearTimeout(trackSearchTimer);
+        trackSearchTimer = setTimeout(() => {
+            handleTrackSearch();
+        }, 250);
+    });
+}
+
+function renderSearchList(listElement, items, { clickable = false } = {}) {
+    if (!listElement) return;
+    listElement.innerHTML = '';
+
+    if (!items || items.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'search-item empty';
+        li.textContent = 'Ничего не найдено';
+        listElement.appendChild(li);
+        return;
+    }
+
+    items.forEach((item) => {
+        const li = document.createElement('li');
+        li.className = 'search-item';
+        li.innerHTML = `
+            <span class="search-title">${item.title || 'Без названия'}</span>
+            <span class="search-artist">${item.artist || ''}</span>
+        `;
+
+        if (clickable && Number.isInteger(item.index)) {
+            li.addEventListener('click', () => playTrack(item.index));
+        }
+
+        listElement.appendChild(li);
+    });
+}
+
+async function fetchRemoteTracksByTitle(query) {
+    try {
+        const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=20`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return (data.results || []).map((item) => ({
+            title: item.trackName || 'Без названия',
+            artist: item.artistName || ''
+        }));
+    } catch (e) {
+        return [];
+    }
+}
+
+async function handleTrackSearch() {
+    if (!trackSearchInput || !searchResults) return;
+
+    const query = trackSearchInput.value.trim().toLowerCase();
+
+    if (!query) {
+        searchResults.classList.add('hidden');
+        if (localSearchResults) localSearchResults.innerHTML = '';
+        if (remoteSearchResults) remoteSearchResults.innerHTML = '';
+        return;
+    }
+
+    const localMatches = tracks
+        .map((track, index) => ({ ...track, index }))
+        .filter((track) => (track.title || '').toLowerCase().includes(query));
+
+    const remoteMatchesRaw = await fetchRemoteTracksByTitle(query);
+    const localKey = new Set(localMatches.map((t) => `${(t.title || '').toLowerCase()}::${(t.artist || '').toLowerCase()}`));
+    const remoteMatches = remoteMatchesRaw.filter((t) => !localKey.has(`${(t.title || '').toLowerCase()}::${(t.artist || '').toLowerCase()}`));
+
+    renderSearchList(localSearchResults, localMatches, { clickable: true });
+    renderSearchList(remoteSearchResults, remoteMatches);
+
+    searchResults.classList.remove('hidden');
+}
+
+function initTrackSearch() {
+    if (!trackSearchInput) return;
+
+    trackSearchInput.addEventListener('input', () => {
+        clearTimeout(trackSearchTimer);
+        trackSearchTimer = setTimeout(() => {
+            handleTrackSearch();
+        }, 250);
+    });
+}
+
+function renderSearchList(listElement, items, { clickable = false } = {}) {
+    if (!listElement) return;
+    listElement.innerHTML = '';
+
+    if (!items || items.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'search-item empty';
+        li.textContent = 'Ничего не найдено';
+        listElement.appendChild(li);
+        return;
+    }
+
+    items.forEach((item) => {
+        const li = document.createElement('li');
+        li.className = 'search-item';
+        li.innerHTML = `
+            <span class="search-title">${item.title || 'Без названия'}</span>
+            <span class="search-artist">${item.artist || ''}</span>
+        `;
+
+        if (clickable && Number.isInteger(item.index)) {
+            li.addEventListener('click', () => playTrack(item.index));
+        }
+
+        listElement.appendChild(li);
+    });
+}
+
+async function fetchRemoteTracksByTitle(query) {
+    try {
+        const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=20`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return (data.results || []).map((item) => ({
+            title: item.trackName || 'Без названия',
+            artist: item.artistName || ''
+        }));
+    } catch (e) {
+        return [];
+    }
+}
+
+async function handleTrackSearch() {
+    if (!trackSearchInput || !searchResults) return;
+
+    const query = trackSearchInput.value.trim().toLowerCase();
+
+    if (!query) {
+        searchResults.classList.add('hidden');
+        if (localSearchResults) localSearchResults.innerHTML = '';
+        if (remoteSearchResults) remoteSearchResults.innerHTML = '';
+        return;
+    }
+
+    const localMatches = tracks
+        .map((track, index) => ({ ...track, index }))
+        .filter((track) => (track.title || '').toLowerCase().includes(query));
+
+    const remoteMatchesRaw = await fetchRemoteTracksByTitle(query);
+    const localKey = new Set(localMatches.map((t) => `${(t.title || '').toLowerCase()}::${(t.artist || '').toLowerCase()}`));
+    const remoteMatches = remoteMatchesRaw.filter((t) => !localKey.has(`${(t.title || '').toLowerCase()}::${(t.artist || '').toLowerCase()}`));
+
+    renderSearchList(localSearchResults, localMatches, { clickable: true });
+    renderSearchList(remoteSearchResults, remoteMatches);
+
+    searchResults.classList.remove('hidden');
+}
+
+function initTrackSearch() {
+    if (!trackSearchInput) return;
+
+    trackSearchInput.addEventListener('input', () => {
+        clearTimeout(trackSearchTimer);
+        trackSearchTimer = setTimeout(() => {
+            handleTrackSearch();
+        }, 250);
     });
 }
 
@@ -1197,7 +1442,7 @@ function updatePlaylistTracksList() {
             miniCtx.fillRect(0, 0, 30, 30);
             miniCoverHtml = canvas.outerHTML;
         }
-        
+      
         trackDiv.innerHTML = `
             ${miniCoverHtml}
             <div class="track-info">
@@ -1758,6 +2003,12 @@ audio.addEventListener('loadedmetadata', () => {
         saveTracks();
         updateTracklist();
     }
+
+    if (currentTrackIndex >= 0 && tracks[currentTrackIndex]) {
+        tracks[currentTrackIndex].duration = Number(audio.duration) || 0;
+        saveTracks();
+        updateTracklist();
+    }
 });
 
 
@@ -1826,7 +2077,6 @@ document.addEventListener('DOMContentLoaded', function() {
     initTrackSearch();
     refreshProgressFill();
     refreshVolumeFill();
-
     if (trackSortSelect) {
         trackSortSelect.value = currentTrackSort;
         trackSortSelect.addEventListener('change', (e) => {
@@ -1835,7 +2085,14 @@ document.addEventListener('DOMContentLoaded', function() {
             updateTracklist();
         });
     }
-
+    if (trackSortSelect) {
+        trackSortSelect.value = currentTrackSort;
+        trackSortSelect.addEventListener('change', (e) => {
+            currentTrackSort = e.target.value;
+            localStorage.setItem('track_sort', currentTrackSort);
+            updateTracklist();
+        });
+    }
     if (moreActionsBtn) {
         moreActionsBtn.addEventListener('click', () => {
             if (currentTrackIndex === -1) return;
