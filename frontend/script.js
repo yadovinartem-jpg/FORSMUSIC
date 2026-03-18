@@ -5,7 +5,8 @@ if (tg) {
 }
 
 // Адрес бэкенд-сервера (ваш Render URL)
-const API_URL = 'https://stunning-enigma-7vj6wv7x996vhx5px-3000.app.github.dev/api';
+const API_URL = 'https://upgraded-giggle-5g7j5gv5wpw9365w-3000.app.github.dev/api';
+
 
 // ========== ЭЛЕМЕНТЫ ==========
 // Шапка
