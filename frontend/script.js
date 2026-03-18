@@ -85,8 +85,9 @@ const applyMyPresetBtn = document.getElementById('applyMyPresetBtn');
 const resetEqBtn = document.getElementById('resetEqBtn');
 const saveEqBtn = document.getElementById('saveEqBtn');
 
-// Аудио элемент
+// Аудио элемент (ИСПРАВЛЕНО!)
 const audio = new Audio();
+audio.crossOrigin = "anonymous"; // Критически важно для эквалайзера!
 
 // ========== ДАННЫЕ ==========
 let isPlaying = false;
