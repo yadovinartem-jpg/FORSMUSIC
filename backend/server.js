@@ -6,13 +6,22 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Настройка CORS
+// ========== CORS (ПРАВИЛЬНАЯ НАСТРОЙКА) ==========
 app.use(cors({
-  origin: '*',
+  origin: 'https://yadovinartem-jpg.github.io',
+  credentials: true,
   methods: ['GET', 'POST', 'OPTIONS', 'HEAD'],
   allowedHeaders: ['Content-Type', 'Range', 'Accept'],
   exposedHeaders: ['Content-Length', 'Content-Range', 'Accept-Ranges', 'Content-Type']
 }));
+
+// Дополнительные CORS-заголовки для всех ответов
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, Content-Type');
+  next();
+});
 
 app.use(express.json());
 app.options('*', cors());
@@ -55,10 +64,18 @@ async function getFileInfo(remotePath) {
   }
 }
 
-// ========== СТРИМИНГ ==========
+// ========== СТРИМИНГ С ПРАВИЛЬНЫМ CORS ==========
 app.get('/api/stream/:path(*)', async (req, res) => {
   const remotePath = decodeURIComponent(req.params.path);
   console.log(`\n🎵 Запрос на стриминг: ${remotePath}`);
+  
+  // ВАЖНО: CORS-заголовки для эквалайзера
+  res.setHeader('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
+  res.setHeader('Access-Control-Allow-Headers', 'Range');
+  res.setHeader('Accept-Ranges', 'bytes');
   
   try {
     // Получаем информацию о файле
@@ -72,14 +89,7 @@ app.get('/api/stream/:path(*)', async (req, res) => {
     
     // Определяем MIME-тип
     const mimeType = fileInfo.mime_type || 'audio/opus';
-    console.log('🎵 MIME-тип:', mimeType);
-    
-    // Заголовки для стриминга
     res.setHeader('Content-Type', mimeType);
-    res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
     
     // Обрабатываем Range запрос (для перемотки)
     const range = req.headers.range;
@@ -110,19 +120,12 @@ app.get('/api/stream/:path(*)', async (req, res) => {
     // Устанавливаем статус (206 для частичного контента)
     res.status(range ? 206 : 200);
     
-    // Считаем отправленные байты
-    let bytesSent = 0;
-    response.data.on('data', (chunk) => {
-      bytesSent += chunk.length;
-      console.log(`📤 Отправлено ${bytesSent} байт`);
-    });
-    
     // Отправляем поток клиенту
     response.data.pipe(res);
     
     // Обработка отключения клиента
     req.on('close', () => {
-      console.log(`📴 Клиент отключился, отправлено ${bytesSent} байт`);
+      console.log('📴 Клиент отключился');
       if (response.data && response.data.destroy) {
         response.data.destroy();
       }
@@ -130,7 +133,7 @@ app.get('/api/stream/:path(*)', async (req, res) => {
     
     response.data.on('error', (error) => {
       if (error.code === 'ECONNRESET') {
-        console.log('⚠️ Соединение сброшено (нормально)');
+        console.log('⚠️ Соединение сброшено (нормально при паузе)');
         return;
       }
       console.error('❌ Ошибка потока:', error.message);
@@ -153,6 +156,10 @@ app.get('/api/stream/:path(*)', async (req, res) => {
 app.get('/api/check/:path(*)', async (req, res) => {
   const remotePath = decodeURIComponent(req.params.path);
   
+  // CORS-заголовки для проверки
+  res.setHeader('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
   try {
     const fileInfo = await getFileInfo(remotePath);
     res.json({
@@ -173,6 +180,9 @@ app.get('/api/check/:path(*)', async (req, res) => {
 
 // ========== HEALTH CHECK ==========
 app.get('/api/health', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', 'https://yadovinartem-jpg.github.io');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
   res.json({ 
     status: 'ok', 
     storage: 'yandex-disk',
