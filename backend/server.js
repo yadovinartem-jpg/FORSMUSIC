@@ -7,7 +7,7 @@ const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 443;
+const PORT = process.env.PORT || 3000;
 
 // ========== СОЗДАЁМ ПАПКУ ДЛЯ ЗАГРУЗОК ==========
 const uploadDir = path.join(__dirname, 'uploads');
