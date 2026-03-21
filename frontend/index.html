@@ -15,8 +15,7 @@
             <h1>ALVAREZ</h1>
             <div class="header-actions">
                 <button id="uploadBtn" class="upload-btn-header" title="Загрузить трек" aria-label="Добавить трек">
-                    <span class="upload-note-icon"></span>
-                    <span class="upload-plus-icon"></span>
+                    <span class="upload-plus-only">+</span>
                 </button>
 
             </div>
@@ -53,20 +52,35 @@
                 </div>
                 
                 <div class="playlist-form">
-                    <div class="playlist-cover-container">
-                        <canvas id="playlistCoverEdit" class="playlist-cover-edit" width="150" height="150"></canvas>
+                    <div class="playlist-hero">
+                        <div class="playlist-cover-container">
+                            <canvas id="playlistCoverEdit" class="playlist-cover-edit" width="150" height="150"></canvas>
+                        </div>
+                        <div class="playlist-hero-info">
+                            <div class="playlist-hero-label">Плейлист</div>
+                            <h4 id="playlistHeroTitle" class="playlist-hero-title">Новый плейлист</h4>
+                            <div id="playlistHeroMeta" class="playlist-hero-meta">0 треков • 0 минут</div>
+                            <div class="playlist-hero-actions">
+                                <button id="playlistPlayBtn" class="playlist-hero-btn primary">▶ Слушать</button>
+                                <button id="playlistShuffleBtn" class="playlist-hero-btn">🔀</button>
+                                <button id="playlistEditFocusBtn" class="playlist-hero-btn">✎</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="playlist-edit-panel">
                         <button id="changePlaylistCoverBtn" class="small-btn">📷 Изменить обложку</button>
+                        <input type="text" id="playlistNameInput" placeholder="Название плейлиста">
+                        <input type="text" id="playlistDescInput" placeholder="Описание плейлиста">
+                        <div id="playlistDurationSummary" class="playlist-duration-summary">0 аудиозаписей • 0 минут</div>
                     </div>
-                    
-                    <input type="text" id="playlistNameInput" placeholder="Название плейлиста">
-                    <input type="text" id="playlistDescInput" placeholder="Описание">
-                    
+
                     <div class="playlist-search">
-                        <input type="text" id="playlistSearchInput" placeholder="🔍 Поиск треков...">
+                        <input type="text" id="playlistSearchInput" placeholder="Быстрый поиск">
                     </div>
-                    
+
                     <div class="available-tracks-list" id="availableTracksList"></div>
-                    
+
                     <h4>Треки в плейлисте:</h4>
                     <div class="playlist-tracks-list" id="playlistTracksList"></div>
                     
@@ -88,7 +102,8 @@
                 
                 <div class="track-menu-actions">
                     <button id="showAddToPlaylistBtn" class="track-action-btn">📋 Добавить в плейлист</button>
-                    <button id="deleteTrackBtn" class="track-action-btn delete">🗑️ Удалить трек</button>
+                    <button id="deleteTrackLocalBtn" class="track-action-btn delete">🗑️ Удалить из треклиста</button>
+                    <button id="deleteTrackCloudBtn" class="track-action-btn delete">☁️🗑️ Удалить из облака и треклиста</button>
                 </div>
             </div>
         </div>
@@ -208,12 +223,14 @@
 
 
             <div class="center-progress-zone">
-                <div class="current-track-info">
-                    <div id="currentTrackTitle" class="current-track-title">Нет трека</div>
-                    <div id="currentTrackArtist" class="current-track-artist"></div>
+                <div class="progress-topline">
+                    <div class="current-track-info">
+                        <div id="currentTrackTitle" class="current-track-title">Нет трека</div>
+                        <div id="currentTrackArtist" class="current-track-artist"></div>
+                    </div>
+                    <span id="timeDisplay" class="time-display">0:00</span>
                 </div>
                 <input type="range" id="progressBar" class="progress-bar" value="0" max="100">
-                <span id="timeDisplay" class="time-display">0:00 / 0:00</span>
             </div>
 
             <div class="right-controls">
@@ -227,6 +244,20 @@
             </div>
         </div>
 
+        <section class="search-section">
+            <input id="trackSearchInput" class="track-search-input" type="search" placeholder="Поиск треков по названию..." aria-label="Поиск треков">
+            <div id="searchResults" class="search-results hidden">
+                <div class="search-group">
+                    <h3>В вашей библиотеке</h3>
+                    <ul id="localSearchResults" class="search-list"></ul>
+                </div>
+                <div class="search-group">
+                    <h3>Найдено</h3>
+                    <ul id="remoteSearchResults" class="search-list"></ul>
+                </div>
+            </div>
+        </section>
+
         <section class="recent-section">
             <h2>Недавно прослушанные</h2>
             <ul id="recentTracksList" class="recent-tracks-list"></ul>
@@ -238,7 +269,15 @@
         </section>
 
         <section class="tracklist center-tracklist">
-            <h2>Основной треклист</h2>
+            <div class="tracklist-header">
+                <h2>Треки</h2>
+                <select id="trackSortSelect" class="track-sort-select" aria-label="Сортировка треков">
+                    <option value="date_desc">По дате добавления</option>
+                    <option value="alpha">По алфавиту</option>
+                    <option value="artist">По исполнителю</option>
+                    <option value="year_desc">По году</option>
+                </select>
+            </div>
             <ul id="tracklist" class="tracklist-ul"></ul>
         </section>
 
