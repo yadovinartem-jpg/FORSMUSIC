@@ -10,6 +10,9 @@
 </head>
 <body>
     <div class="app">
+        <!-- Скрытый аудио элемент с правильным CORS атрибутом -->
+        <audio id="globalAudio" crossorigin="anonymous" style="display: none;"></audio>
+
         <!-- Шапка с загрузкой -->
         <div class="header">
             <h1>ALVAREZ</h1>
@@ -17,7 +20,6 @@
                 <button id="uploadBtn" class="upload-btn-header" title="Загрузить трек" aria-label="Добавить трек">
                     <span class="upload-plus-only">+</span>
                 </button>
-
             </div>
         </div>
 
@@ -220,7 +222,6 @@
             <div class="album-art-container compact-art">
                 <canvas id="albumArt" class="album-art" width="64" height="64"></canvas>
             </div>
-
 
             <div class="center-progress-zone">
                 <div class="progress-topline">
