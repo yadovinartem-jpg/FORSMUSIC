@@ -5,7 +5,7 @@ if (tg) {
 }
 
 // Адрес бэкенд-сервера (ваш Render URL)
-const API_URL = 'https://upgraded-giggle-5g7j5gv5wpw9365w-3000.app.github.dev/api'; 
+const API_URL = 'http://144.31.156.139:3000/api'; 
 
 
 // ========== ЭЛЕМЕНТЫ ==========
@@ -23,6 +23,9 @@ const confirmUploadBtn = document.getElementById('confirmUploadBtn');
 const playlistModal = document.getElementById('playlistModal');
 const closePlaylistModalBtn = document.getElementById('closePlaylistModalBtn');
 const playlistModalTitle = document.getElementById('playlistModalTitle');
+const playlistHeroTitle = document.getElementById('playlistHeroTitle');
+const playlistHeroMeta = document.getElementById('playlistHeroMeta');
+const playlistDurationSummary = document.getElementById('playlistDurationSummary');
 const playlistCoverEdit = document.getElementById('playlistCoverEdit');
 const playlistNameInput = document.getElementById('playlistNameInput');
 const playlistDescInput = document.getElementById('playlistDescInput');
@@ -32,6 +35,9 @@ const playlistTracksList = document.getElementById('playlistTracksList');
 const savePlaylistBtn = document.getElementById('savePlaylistBtn');
 const deletePlaylistBtn = document.getElementById('deletePlaylistBtn');
 const changePlaylistCoverBtn = document.getElementById('changePlaylistCoverBtn');
+const playlistPlayBtn = document.getElementById('playlistPlayBtn');
+const playlistShuffleBtn = document.getElementById('playlistShuffleBtn');
+const playlistEditFocusBtn = document.getElementById('playlistEditFocusBtn');
 const coverFileInput = document.getElementById('coverFileInput');
 
 // Меню троеточия
@@ -246,6 +252,98 @@ async function extractMetadata(file) {
     }
 }
 
+function getTrackDurationValue(track = null) {
+    const duration = Number(track?.duration);
+    return Number.isFinite(duration) && duration > 0 ? duration : 0;
+}
+
+function readAudioDuration(file) {
+    return new Promise(async (resolve) => {
+        if (!file) {
+            resolve(0);
+            return;
+        }
+
+        const tempAudio = document.createElement('audio');
+        const objectUrl = URL.createObjectURL(file);
+
+        const cleanup = () => {
+            tempAudio.src = '';
+            URL.revokeObjectURL(objectUrl);
+        };
+
+        tempAudio.preload = 'metadata';
+        tempAudio.onloadedmetadata = () => {
+            const duration = Number(tempAudio.duration);
+            cleanup();
+            resolve(Number.isFinite(duration) && duration > 0 ? duration : 0);
+        };
+        tempAudio.onerror = () => {
+            cleanup();
+            file.arrayBuffer()
+                .then((buffer) => {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioCtx) return 0;
+                    const ctx = new AudioCtx();
+                    return ctx.decodeAudioData(buffer.slice(0)).then((audioBuffer) => {
+                        const duration = Number(audioBuffer.duration);
+                        if (typeof ctx.close === 'function') {
+                            ctx.close().catch(() => {});
+                        }
+                        return Number.isFinite(duration) && duration > 0 ? duration : 0;
+                    });
+                })
+                .then((duration) => resolve(duration || 0))
+                .catch(() => resolve(0));
+        };
+        tempAudio.src = objectUrl;
+    });
+}
+
+function formatPlaylistDuration(seconds) {
+    const totalSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+
+    if (hours > 0) {
+        return `${hours} ч ${minutes} мин`;
+    }
+    if (minutes > 0) {
+        return secs > 0 ? `${minutes} минут ${secs} секунд` : `${minutes} минут`;
+    }
+    return `${secs} секунд`;
+}
+
+function getPlaylistTracks(playlistId = currentPlaylistId) {
+    return playlistId
+        ? (playlists.find((p) => p.id === playlistId)?.tracks || [])
+        : draftPlaylistTracks;
+}
+
+function getPlaylistTotalDuration(playlistTracks = []) {
+    return playlistTracks.reduce((sum, track) => sum + getTrackDurationValue(track), 0);
+}
+
+function updatePlaylistMeta() {
+    const playlistTracks = getPlaylistTracks();
+    const totalDuration = getPlaylistTotalDuration(playlistTracks);
+    const countText = `${playlistTracks.length} ${playlistTracks.length === 1 ? 'трек' : 'треков'}`;
+    const durationText = formatPlaylistDuration(totalDuration);
+
+    if (playlistHeroTitle) {
+        playlistHeroTitle.textContent = playlistNameInput?.value?.trim() || 'Новый плейлист';
+    }
+
+    if (playlistHeroMeta) {
+        playlistHeroMeta.textContent = `${countText} • ${durationText}`;
+    }
+
+    if (playlistDurationSummary) {
+        playlistDurationSummary.textContent = `${playlistTracks.length} аудиозаписей • ${durationText}`;
+    }
+}
+
 // ========== ЗАГРУЗКА ТРЕКОВ ==========
 uploadBtn.addEventListener('click', () => {
     uploadModal.classList.remove('hidden');
@@ -288,6 +386,7 @@ fileInput.addEventListener('change', async (e) => {
         const fileName = file.name.replace('.mp3', '').replace('.MP3', '');
         
         const metadata = await extractMetadata(file);
+        const duration = await readAudioDuration(file);
         
         return {
             url: fileUrl,
@@ -304,7 +403,6 @@ fileInput.addEventListener('change', async (e) => {
     // Ждем завершения всех промисов
     const results = await Promise.all(metadataPromises);
     pendingTracks = results.filter(track => track !== null);
-    
     updatePendingTracksList();
     confirmUploadBtn.disabled = pendingTracks.length === 0;
 });
@@ -370,42 +468,8 @@ function updatePendingTracksList() {
     });
 }
 
-function showLoading(message) {
-    const loader = document.createElement('div');
-    loader.id = 'global-loader';
-    loader.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0,0,0,0.7);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        color: white;
-        font-size: 18px;
-        backdrop-filter: blur(5px);
-    `;
-    loader.innerHTML = `
-        <div style="text-align: center;">
-            <div style="font-size: 48px; margin-bottom: 20px;">⏳</div>
-            <div>${message}</div>
-        </div>
-    `;
-    document.body.appendChild(loader);
-}
-
-function hideLoading() {
-    const loader = document.getElementById('global-loader');
-    if (loader) loader.remove();
-}
-
 // [ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ]
 confirmUploadBtn.addEventListener('click', async () => {
-    showLoading('Загрузка и сжатие треков...');
-    
     let uploadedCount = 0;
     const newTracks = [];
     
@@ -456,7 +520,6 @@ confirmUploadBtn.addEventListener('click', async () => {
     saveTracks();
     updateTracklist();
     uploadModal.classList.add('hidden');
-    hideLoading();
     
     if (uploadedCount > 0) {
         alert(`Загружено ${uploadedCount} треков`);
@@ -538,8 +601,7 @@ function updateTracklist() {
             miniCtx.fillRect(0, 0, 40, 40);
             miniCoverHtml = canvas.outerHTML;
         }
-        
-        const durationText = index === currentTrackIndex ? formatTime(audio.currentTime || 0) : formatTime(track.duration || 0);
+        const durationText = index === currentTrackIndex ? formatTime(audio.currentTime || 0) : formatTime(getTrackDurationValue(track));
 
         li.innerHTML = `
             ${miniCoverHtml}
@@ -562,7 +624,6 @@ function updateTracklist() {
         tracklist.appendChild(li);
     });
 }
-
 function updateActiveTrackTimeInList() {
     if (currentTrackIndex < 0 || !tracklist) return;
     const durationEl = tracklist.querySelector(`.track-duration[data-index="${currentTrackIndex}"]`);
@@ -596,7 +657,6 @@ function addTrackToRecent(track) {
     recentTrackPaths = recentTrackPaths.filter(path => path !== track.path);
     recentTrackPaths.unshift(track.path);
     recentTrackPaths = recentTrackPaths.slice(0, 20); // храним только 20 последних
-
     saveRecentTracks();
     updateRecentTracksList();
 }
@@ -644,8 +704,7 @@ function updateRecentTracksList() {
             miniCtx.fillRect(0, 0, 32, 32);
             coverHtml = canvas.outerHTML;
         }
-
-        const durationText = index === currentTrackIndex ? formatTime(audio.currentTime || 0) : formatTime(track.duration || 0);
+        const durationText = index === currentTrackIndex ? formatTime(audio.currentTime || 0) : formatTime(getTrackDurationValue(track));
 
         li.innerHTML = `
             ${coverHtml}
@@ -731,7 +790,6 @@ async function handleTrackSearch() {
 
 function initTrackSearch() {
     if (!trackSearchInput) return;
-
     trackSearchInput.addEventListener('input', () => {
         clearTimeout(trackSearchTimer);
         trackSearchTimer = setTimeout(() => {
@@ -944,8 +1002,6 @@ async function deleteTrackByMenu({ deleteFromCloud }) {
             console.error('Ошибка удаления с Яндекс.Диска:', error);
         }
     }
-
-    // Удаляем трек из всех плейлистов
     playlists.forEach(playlist => {
         playlist.tracks = playlist.tracks.filter(t => t.path !== trackToDelete.path);
     });
@@ -953,7 +1009,6 @@ async function deleteTrackByMenu({ deleteFromCloud }) {
 
     recentTrackPaths = recentTrackPaths.filter(path => path !== trackToDelete.path);
     saveRecentTracks();
-
     // Очищаем временный URL если есть
     if (trackToDelete.url && trackToDelete.url.startsWith('blob:')) {
         URL.revokeObjectURL(trackToDelete.url);
@@ -981,6 +1036,14 @@ async function deleteTrackByMenu({ deleteFromCloud }) {
     updatePlaylistsGrid();
     trackMenu.classList.add('hidden');
     currentTrackForMenu = null;
+}
+
+if (deleteTrackLocalBtn) {
+    deleteTrackLocalBtn.addEventListener('click', () => deleteTrackByMenu({ deleteFromCloud: false }));
+}
+
+if (deleteTrackCloudBtn) {
+    deleteTrackCloudBtn.addEventListener('click', () => deleteTrackByMenu({ deleteFromCloud: true }));
 }
 
 if (deleteTrackLocalBtn) {
@@ -1037,7 +1100,7 @@ function updatePlaylistsGrid() {
         square.innerHTML = `
             ${coverHtml}
             <div class="playlist-square-name">${playlist.name}</div>
-            <div class="playlist-square-count">${playlist.tracks.length} треков</div>
+            <div class="playlist-square-count">${playlist.tracks.length} треков • ${formatPlaylistDuration(getPlaylistTotalDuration(playlist.tracks))}</div>
         `;
         
         square.addEventListener('click', () => openPlaylistEditor(playlist.id));
@@ -1090,6 +1153,7 @@ function openPlaylistEditor(playlistId = null) {
     
     updateAvailableTracksList();
     updatePlaylistTracksList();
+    updatePlaylistMeta();
     
     playlistModal.classList.remove('hidden');
 }
@@ -1138,6 +1202,7 @@ function updateAvailableTracksList() {
                 <span class="track-title">${track.title}</span>
                 <span class="track-artist">${track.artist || ''}</span>
             </div>
+            <span class="playlist-track-duration">${formatTime(getTrackDurationValue(track))}</span>
             <button class="add-to-playlist">+</button>
         `;
         
@@ -1205,6 +1270,7 @@ function updatePlaylistTracksList() {
                 <span class="track-title">${track.title}</span>
                 <span class="track-artist">${track.artist || ''}</span>
             </div>
+            <span class="playlist-track-duration">${formatTime(getTrackDurationValue(track))}</span>
             <button class="remove-from-playlist">✕</button>
         `;
         
@@ -1223,6 +1289,8 @@ function updatePlaylistTracksList() {
         
         playlistTracksList.appendChild(trackDiv);
     });
+
+    updatePlaylistMeta();
 }
 
 function addTrackToCurrentPlaylist(track) {
@@ -1261,6 +1329,19 @@ function removeTrackFromCurrentPlaylist(trackIndex) {
     updatePlaylistTracksList();
 }
 
+function playPlaylist({ shuffle = false } = {}) {
+    const playlistTracks = getPlaylistTracks();
+    if (!playlistTracks.length) return;
+
+    const sourceTrack = shuffle
+        ? playlistTracks[Math.floor(Math.random() * playlistTracks.length)]
+        : playlistTracks[0];
+    const trackIndex = tracks.findIndex((track) => track.path === sourceTrack.path);
+    if (trackIndex !== -1) {
+        playTrack(trackIndex);
+    }
+}
+
 savePlaylistBtn.addEventListener('click', () => {
     const name = playlistNameInput ? playlistNameInput.value.trim() : '';
     const desc = playlistDescInput ? playlistDescInput.value.trim() : '';
@@ -1289,6 +1370,7 @@ savePlaylistBtn.addEventListener('click', () => {
     
     localStorage.setItem('playlists', JSON.stringify(playlists));
     updatePlaylistsGrid();
+    updatePlaylistMeta();
     playlistModal.classList.add('hidden');
 });
 
@@ -1300,6 +1382,25 @@ deletePlaylistBtn.addEventListener('click', () => {
         playlistModal.classList.add('hidden');
     }
 });
+
+if (playlistPlayBtn) {
+    playlistPlayBtn.addEventListener('click', () => playPlaylist({ shuffle: false }));
+}
+
+if (playlistShuffleBtn) {
+    playlistShuffleBtn.addEventListener('click', () => playPlaylist({ shuffle: true }));
+}
+
+if (playlistEditFocusBtn) {
+    playlistEditFocusBtn.addEventListener('click', () => {
+        playlistNameInput?.focus();
+        playlistNameInput?.select?.();
+    });
+}
+
+if (playlistNameInput) {
+    playlistNameInput.addEventListener('input', updatePlaylistMeta);
+}
 
 if (playlistSearchInput) {
     playlistSearchInput.addEventListener('input', updateAvailableTracksList);
@@ -1359,7 +1460,7 @@ function updateAlbumArt(track) {
 }
 
 function formatTime(seconds) {
-    if (isNaN(seconds)) return '0:00';
+    if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -1718,15 +1819,25 @@ prevBtn.addEventListener('click', playPrev);
 nextBtn.addEventListener('click', playNext);
 
 progressBar.addEventListener('input', () => {
-    if (audio.duration && !isNaN(audio.duration)) {
-        audio.currentTime = (progressBar.value / 100) * audio.duration;
+    const activeTrack = tracks[currentTrackIndex];
+    const totalDuration = Number.isFinite(audio.duration) && audio.duration > 0
+        ? audio.duration
+        : getTrackDurationValue(activeTrack);
+
+    if (totalDuration > 0) {
+        audio.currentTime = (progressBar.value / 100) * totalDuration;
     }
     refreshProgressFill();
 });
 
 audio.addEventListener('timeupdate', () => {
-    if (audio.duration && !isNaN(audio.duration) && progressBar && timeDisplay) {
-        const progress = (audio.currentTime / audio.duration) * 100;
+    const activeTrack = tracks[currentTrackIndex];
+    const totalDuration = Number.isFinite(audio.duration) && audio.duration > 0
+        ? audio.duration
+        : getTrackDurationValue(activeTrack);
+
+    if (totalDuration > 0 && progressBar && timeDisplay) {
+        const progress = (audio.currentTime / totalDuration) * 100;
         progressBar.value = progress;
         refreshProgressFill();
         timeDisplay.textContent = `${formatTime(audio.currentTime)}`;
@@ -1757,10 +1868,21 @@ audio.addEventListener('loadedmetadata', () => {
     }
 
     if (currentTrackIndex >= 0 && tracks[currentTrackIndex]) {
-        tracks[currentTrackIndex].duration = Number(audio.duration) || 0;
+        tracks[currentTrackIndex].duration = getTrackDurationValue({ duration: audio.duration }) || getTrackDurationValue(tracks[currentTrackIndex]);
         saveTracks();
         updateTracklist();
+        updateRecentTracksList();
     }
+});
+
+audio.addEventListener('play', () => {
+    isPlaying = true;
+    updatePlayPauseButton();
+});
+
+audio.addEventListener('pause', () => {
+    isPlaying = false;
+    updatePlayPauseButton();
 });
 
 function paintRangeFill(input, percent, activeColor = '#6d26ff', baseColor = '#1c2230') {
@@ -1834,6 +1956,13 @@ document.addEventListener('DOMContentLoaded', function() {
             currentTrackSort = e.target.value;
             localStorage.setItem('track_sort', currentTrackSort);
             updateTracklist();
+        });
+    }
+
+    if (moreActionsBtn) {
+        moreActionsBtn.addEventListener('click', () => {
+            if (currentTrackIndex === -1) return;
+            openTrackMenu(currentTrackIndex);
         });
     }
     

@@ -54,20 +54,35 @@
                 </div>
                 
                 <div class="playlist-form">
-                    <div class="playlist-cover-container">
-                        <canvas id="playlistCoverEdit" class="playlist-cover-edit" width="150" height="150"></canvas>
+                    <div class="playlist-hero">
+                        <div class="playlist-cover-container">
+                            <canvas id="playlistCoverEdit" class="playlist-cover-edit" width="150" height="150"></canvas>
+                        </div>
+                        <div class="playlist-hero-info">
+                            <div class="playlist-hero-label">Плейлист</div>
+                            <h4 id="playlistHeroTitle" class="playlist-hero-title">Новый плейлист</h4>
+                            <div id="playlistHeroMeta" class="playlist-hero-meta">0 треков • 0 минут</div>
+                            <div class="playlist-hero-actions">
+                                <button id="playlistPlayBtn" class="playlist-hero-btn primary">▶ Слушать</button>
+                                <button id="playlistShuffleBtn" class="playlist-hero-btn">🔀</button>
+                                <button id="playlistEditFocusBtn" class="playlist-hero-btn">✎</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="playlist-edit-panel">
                         <button id="changePlaylistCoverBtn" class="small-btn">📷 Изменить обложку</button>
+                        <input type="text" id="playlistNameInput" placeholder="Название плейлиста">
+                        <input type="text" id="playlistDescInput" placeholder="Описание плейлиста">
+                        <div id="playlistDurationSummary" class="playlist-duration-summary">0 аудиозаписей • 0 минут</div>
                     </div>
-                    
-                    <input type="text" id="playlistNameInput" placeholder="Название плейлиста">
-                    <input type="text" id="playlistDescInput" placeholder="Описание">
-                    
+
                     <div class="playlist-search">
-                        <input type="text" id="playlistSearchInput" placeholder="🔍 Поиск треков...">
+                        <input type="text" id="playlistSearchInput" placeholder="Быстрый поиск">
                     </div>
-                    
+
                     <div class="available-tracks-list" id="availableTracksList"></div>
-                    
+
                     <h4>Треки в плейлисте:</h4>
                     <div class="playlist-tracks-list" id="playlistTracksList"></div>
                     
