@@ -2274,7 +2274,6 @@ body {
   min-width: 38px;
   text-align: right;
 }
-
 /* ===== Requested fixes: volume/progress/playlists/eq ===== */
 .compact-volume {
   background: transparent !important;
@@ -2389,7 +2388,6 @@ body {
   aspect-ratio: 1 / 1;
   height: auto;
 }
-
 /* ===== Alignment and layout hotfixes ===== */
 :root {
   --vk-main-bg: #04060a;
