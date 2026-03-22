@@ -103,6 +103,17 @@ async function getFileInfo(remotePath) {
   }
 }
 
+async function listMusicFiles() {
+  const response = await yandexApi.get('/resources', {
+    params: {
+      path: '/forsity-music',
+      limit: 200
+    }
+  });
+
+  return response.data._embedded?.items || [];
+}
+
 async function deleteFile(remotePath) {
   await yandexApi.delete('/resources', {
     params: { path: remotePath, permanently: true }
@@ -343,6 +354,40 @@ app.delete('/api/track/:path(*)', async (req, res) => {
   } catch (error) {
     console.error('❌ Ошибка удаления:', error);
     res.status(500).json({ error: 'Delete failed' });
+  }
+});
+
+app.get('/api/search', async (req, res) => {
+  try {
+    const query = String(req.query.q || '').trim().toLowerCase();
+    if (!query) {
+      return res.json({ results: [] });
+    }
+
+    const items = await listMusicFiles();
+    const results = items
+      .filter((item) => item.type === 'file')
+      .map((item) => {
+        const baseName = item.name.replace(/\.[^.]+$/, '');
+        const [titlePart, artistPart] = baseName.split(' - ');
+        return {
+          title: titlePart || baseName,
+          artist: artistPart || '',
+          name: item.name,
+          path: item.path,
+          addedAt: item.created || item.modified || new Date().toISOString()
+        };
+      })
+      .filter((item) => {
+        const haystack = `${item.title} ${item.artist} ${item.name}`.toLowerCase();
+        return haystack.includes(query);
+      })
+      .slice(0, 30);
+
+    res.json({ results });
+  } catch (error) {
+    console.error('❌ Ошибка поиска треков:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Search failed' });
   }
 });
 
