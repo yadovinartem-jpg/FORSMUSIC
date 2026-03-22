@@ -93,8 +93,23 @@ async function getFileInfo(remotePath) {
         throw error;
     }
 }
+async function listMusicFiles() {
+  const response = await yandexApi.get('/resources', {
+    params: {
+      path: '/forsity-music',
+      limit: 200
+    }
+  });
 
-// ========== ЭНДПОИНТЫ ==========
+  return response.data._embedded?.items || [];
+}
+
+async function deleteFile(remotePath) {
+  await yandexApi.delete('/resources', {
+    params: { path: remotePath, permanently: true }
+  });
+  console.log('✅ Файл удалён с Яндекс.Диска');
+}
 
 // Проверка здоровья
 app.get('/api/health', (req, res) => {
@@ -256,23 +271,48 @@ if (YANDEX_TOKEN) {
         }
     });
 
-    // Проверка файла на Яндекс.Диске
-    app.get('/api/yandex/check/:path(*)', async (req, res) => {
-        const remotePath = decodeURIComponent(req.params.path);
-        try {
-            const fileInfo = await getFileInfo(remotePath);
-            res.json({
-                exists: true,
-                name: fileInfo.name,
-                size: fileInfo.size,
-                mime_type: fileInfo.mime_type,
-                path: remotePath
-            });
-        } catch (error) {
-            res.json({ exists: false, path: remotePath });
-        }
-    });
-}
+app.get('/api/search', async (req, res) => {
+  try {
+    const query = String(req.query.q || '').trim().toLowerCase();
+    if (!query) {
+      return res.json({ results: [] });
+    }
+
+    const items = await listMusicFiles();
+    const results = items
+      .filter((item) => item.type === 'file')
+      .map((item) => {
+        const baseName = item.name.replace(/\.[^.]+$/, '');
+        const [titlePart, artistPart] = baseName.split(' - ');
+        return {
+          title: titlePart || baseName,
+          artist: artistPart || '',
+          name: item.name,
+          path: item.path,
+          addedAt: item.created || item.modified || new Date().toISOString()
+        };
+      })
+      .filter((item) => {
+        const haystack = `${item.title} ${item.artist} ${item.name}`.toLowerCase();
+        return haystack.includes(query);
+      })
+      .slice(0, 30);
+
+    res.json({ results });
+  } catch (error) {
+    console.error('❌ Ошибка поиска треков:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Search failed' });
+  }
+});
+
+// ========== HEALTH CHECK ==========
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    storage: 'yandex-disk',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // ========== ЗАПУСК СЕРВЕРА ==========
 app.listen(PORT, '0.0.0.0', () => {

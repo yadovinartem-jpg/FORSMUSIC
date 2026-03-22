@@ -54,6 +54,7 @@
                 </div>
                 
                 <div class="playlist-form">
+                    <div class="playlist-view-panel" id="playlistViewPanel">
                     <div class="playlist-hero">
                         <div class="playlist-cover-container">
                             <canvas id="playlistCoverEdit" class="playlist-cover-edit" width="150" height="150"></canvas>
@@ -65,30 +66,34 @@
                             <div class="playlist-hero-actions">
                                 <button id="playlistPlayBtn" class="playlist-hero-btn primary">▶ Слушать</button>
                                 <button id="playlistShuffleBtn" class="playlist-hero-btn">🔀</button>
+                                <button id="playlistFollowBtn" class="playlist-hero-btn hidden">＋</button>
                                 <button id="playlistEditFocusBtn" class="playlist-hero-btn">✎</button>
                             </div>
                         </div>
                     </div>
+                    </div>
 
-                    <div class="playlist-edit-panel">
-                        <button id="changePlaylistCoverBtn" class="small-btn">📷 Изменить обложку</button>
+                    <div class="playlist-edit-panel hidden" id="playlistEditPanel">
                         <input type="text" id="playlistNameInput" placeholder="Название плейлиста">
                         <input type="text" id="playlistDescInput" placeholder="Описание плейлиста">
+                        <label class="playlist-visibility-toggle">
+                            <input type="checkbox" id="playlistVisibilityInput">
+                            <span>Доступен всем для просмотра</span>
+                        </label>
                         <div id="playlistDurationSummary" class="playlist-duration-summary">0 аудиозаписей • 0 минут</div>
                     </div>
 
-                    <div class="playlist-search">
+                    <div class="playlist-search hidden" id="playlistSearchPanel">
                         <input type="text" id="playlistSearchInput" placeholder="Быстрый поиск">
                     </div>
 
-                    <div class="available-tracks-list" id="availableTracksList"></div>
+                    <div class="available-tracks-list hidden" id="availableTracksList"></div>
 
                     <h4>Треки в плейлисте:</h4>
                     <div class="playlist-tracks-list" id="playlistTracksList"></div>
-                    
                     <div class="playlist-actions">
-                        <button id="savePlaylistBtn" class="save-playlist-btn">💾 Сохранить плейлист</button>
-                        <button id="deletePlaylistBtn" class="delete-playlist-btn hidden">🗑️ Удалить плейлист</button>
+                        <button id="deletePlaylistBtn" class="delete-playlist-btn hidden">Удалить плейлист</button>
+                        <button id="savePlaylistBtn" class="save-playlist-btn hidden">Сохранить</button>
                     </div>
                 </div>
             </div>

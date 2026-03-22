@@ -3,10 +3,8 @@ const tg = window.Telegram?.WebApp;
 if (tg) {
     tg.expand();
 }
-
 // Адрес бэкенд-сервера (ваш Render URL)
 const API_URL = 'http://144.31.156.139:3000/api'; 
-
 
 // ========== ЭЛЕМЕНТЫ ==========
 // Шапка
@@ -26,9 +24,13 @@ const playlistModalTitle = document.getElementById('playlistModalTitle');
 const playlistHeroTitle = document.getElementById('playlistHeroTitle');
 const playlistHeroMeta = document.getElementById('playlistHeroMeta');
 const playlistDurationSummary = document.getElementById('playlistDurationSummary');
+const playlistViewPanel = document.getElementById('playlistViewPanel');
+const playlistEditPanel = document.getElementById('playlistEditPanel');
+const playlistSearchPanel = document.getElementById('playlistSearchPanel');
 const playlistCoverEdit = document.getElementById('playlistCoverEdit');
 const playlistNameInput = document.getElementById('playlistNameInput');
 const playlistDescInput = document.getElementById('playlistDescInput');
+const playlistVisibilityInput = document.getElementById('playlistVisibilityInput');
 const playlistSearchInput = document.getElementById('playlistSearchInput');
 const availableTracksList = document.getElementById('availableTracksList');
 const playlistTracksList = document.getElementById('playlistTracksList');
@@ -37,6 +39,7 @@ const deletePlaylistBtn = document.getElementById('deletePlaylistBtn');
 const changePlaylistCoverBtn = document.getElementById('changePlaylistCoverBtn');
 const playlistPlayBtn = document.getElementById('playlistPlayBtn');
 const playlistShuffleBtn = document.getElementById('playlistShuffleBtn');
+const playlistFollowBtn = document.getElementById('playlistFollowBtn');
 const playlistEditFocusBtn = document.getElementById('playlistEditFocusBtn');
 const coverFileInput = document.getElementById('coverFileInput');
 
@@ -110,6 +113,8 @@ let recentTrackPaths = JSON.parse(localStorage.getItem('recent_tracks')) || [];
 let currentTrackSort = localStorage.getItem('track_sort') || 'date_desc';
 let trackSearchTimer = null;
 let draftPlaylistTracks = [];
+let playlistEditMode = false;
+const CURRENT_USER_NAME = 'Артём Ядовин';
 
 // [СОХРАНЕНИЕ И ЗАГРУЗКА ТРЕКОВ]
 function saveTracks() {
@@ -327,6 +332,117 @@ function getPlaylistTotalDuration(playlistTracks = []) {
 
 function updatePlaylistMeta() {
     const playlistTracks = getPlaylistTracks();
+    const playlist = currentPlaylistId ? playlists.find((p) => p.id === currentPlaylistId) : null;
+    const totalDuration = getPlaylistTotalDuration(playlistTracks);
+    const countText = `${playlistTracks.length} ${playlistTracks.length === 1 ? 'трек' : 'треков'}`;
+    const durationText = formatPlaylistDuration(totalDuration);
+
+    if (playlistHeroTitle) {
+        playlistHeroTitle.textContent = playlistNameInput?.value?.trim() || 'Новый плейлист';
+    }
+
+    if (playlistHeroMeta) {
+        const updatedAt = playlist?.updatedAt
+            ? new Date(playlist.updatedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+            : 'сейчас';
+        playlistHeroMeta.textContent = `${countText} • ${durationText} • обновлён ${updatedAt}`;
+    }
+
+    if (playlistDurationSummary) {
+        playlistDurationSummary.textContent = `${playlistTracks.length} аудиозаписей • ${durationText}`;
+    }
+}
+
+function isPlaylistOwner(playlist) {
+    return !playlist || !playlist.owner || playlist.owner === CURRENT_USER_NAME;
+}
+
+function setPlaylistMode(isEditMode) {
+    playlistEditMode = isEditMode;
+    playlistViewPanel?.classList.toggle('hidden', isEditMode);
+    playlistEditPanel?.classList.toggle('hidden', !isEditMode);
+    playlistSearchPanel?.classList.toggle('hidden', !isEditMode);
+    availableTracksList?.classList.toggle('hidden', !isEditMode || !(playlistSearchInput?.value || '').trim());
+    savePlaylistBtn?.classList.toggle('hidden', !isEditMode);
+    deletePlaylistBtn?.classList.toggle('hidden', !isEditMode || !currentPlaylistId);
+    playlistModalTitle.textContent = isEditMode ? 'Редактирование плейлиста' : '';
+}
+
+function getTrackDurationValue(track = null) {
+    const duration = Number(track?.duration);
+    return Number.isFinite(duration) && duration > 0 ? duration : 0;
+}
+
+function readAudioDuration(file) {
+    return new Promise(async (resolve) => {
+        if (!file) {
+            resolve(0);
+            return;
+        }
+
+        const tempAudio = document.createElement('audio');
+        const objectUrl = URL.createObjectURL(file);
+
+        const cleanup = () => {
+            tempAudio.src = '';
+            URL.revokeObjectURL(objectUrl);
+        };
+
+        tempAudio.preload = 'metadata';
+        tempAudio.onloadedmetadata = () => {
+            const duration = Number(tempAudio.duration);
+            cleanup();
+            resolve(Number.isFinite(duration) && duration > 0 ? duration : 0);
+        };
+        tempAudio.onerror = () => {
+            cleanup();
+            file.arrayBuffer()
+                .then((buffer) => {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioCtx) return 0;
+                    const ctx = new AudioCtx();
+                    return ctx.decodeAudioData(buffer.slice(0)).then((audioBuffer) => {
+                        const duration = Number(audioBuffer.duration);
+                        if (typeof ctx.close === 'function') {
+                            ctx.close().catch(() => {});
+                        }
+                        return Number.isFinite(duration) && duration > 0 ? duration : 0;
+                    });
+                })
+                .then((duration) => resolve(duration || 0))
+                .catch(() => resolve(0));
+        };
+        tempAudio.src = objectUrl;
+    });
+}
+
+function formatPlaylistDuration(seconds) {
+    const totalSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+
+    if (hours > 0) {
+        return `${hours} ч ${minutes} мин`;
+    }
+    if (minutes > 0) {
+        return secs > 0 ? `${minutes} минут ${secs} секунд` : `${minutes} минут`;
+    }
+    return `${secs} секунд`;
+}
+
+function getPlaylistTracks(playlistId = currentPlaylistId) {
+    return playlistId
+        ? (playlists.find((p) => p.id === playlistId)?.tracks || [])
+        : draftPlaylistTracks;
+}
+
+function getPlaylistTotalDuration(playlistTracks = []) {
+    return playlistTracks.reduce((sum, track) => sum + getTrackDurationValue(track), 0);
+}
+
+function updatePlaylistMeta() {
+    const playlistTracks = getPlaylistTracks();
     const totalDuration = getPlaylistTotalDuration(playlistTracks);
     const countText = `${playlistTracks.length} ${playlistTracks.length === 1 ? 'трек' : 'треков'}`;
     const durationText = formatPlaylistDuration(totalDuration);
@@ -396,9 +512,10 @@ fileInput.addEventListener('change', async (e) => {
             albumArt: metadata.albumArt,
             fileName: fileName,
             year: metadata.year || '',
-            addedAt: Date.now()
-        };
-    });
+            addedAt: Date.now(),
+            duration
+        });
+    }
     
     // Ждем завершения всех промисов
     const results = await Promise.all(metadataPromises);
@@ -648,6 +765,31 @@ function updateActiveTrackTimeInRecent() {
     }
 }
 
+
+function updateActiveTrackTimeInList() {
+    if (currentTrackIndex < 0 || !tracklist) return;
+    const durationEl = tracklist.querySelector(`.track-duration[data-index="${currentTrackIndex}"]`);
+    if (!durationEl) return;
+
+    if (isPlaying || audio.currentTime > 0) {
+        durationEl.textContent = formatTime(audio.currentTime || 0);
+    } else {
+        durationEl.textContent = formatTime(getTrackDurationValue(tracks[currentTrackIndex]));
+    }
+}
+
+function updateActiveTrackTimeInRecent() {
+    if (currentTrackIndex < 0 || !recentTracksList) return;
+    const durationEl = recentTracksList.querySelector(`.recent-track-time[data-index="${currentTrackIndex}"]`);
+    if (!durationEl) return;
+
+    if (isPlaying || audio.currentTime > 0) {
+        durationEl.textContent = formatTime(audio.currentTime || 0);
+    } else {
+        durationEl.textContent = formatTime(getTrackDurationValue(tracks[currentTrackIndex]));
+    }
+}
+
 function saveRecentTracks() {
     localStorage.setItem('recent_tracks', JSON.stringify(recentTrackPaths));
 }
@@ -706,6 +848,8 @@ function updateRecentTracksList() {
         }
         const durationText = index === currentTrackIndex ? formatTime(audio.currentTime || 0) : formatTime(getTrackDurationValue(track));
 
+        const durationText = index === currentTrackIndex ? formatTime(audio.currentTime || 0) : formatTime(getTrackDurationValue(track));
+
         li.innerHTML = `
             ${coverHtml}
             <div class="track-info">
@@ -750,12 +894,14 @@ function renderSearchList(listElement, items, { clickable = false } = {}) {
 
 async function fetchRemoteTracksByTitle(query) {
     try {
-        const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=20`);
+        const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`);
         if (!response.ok) return [];
         const data = await response.json();
         return (data.results || []).map((item) => ({
-            title: item.trackName || 'Без названия',
-            artist: item.artistName || ''
+            title: item.title || item.name || 'Без названия',
+            artist: item.artist || '',
+            path: item.path || '',
+            addedAt: item.addedAt || Date.now()
         }));
     } catch (e) {
         return [];
@@ -766,6 +912,33 @@ async function handleTrackSearch() {
     if (!trackSearchInput || !searchResults) return;
 
     const query = trackSearchInput.value.trim().toLowerCase();
+
+    if (!query) {
+        searchResults.classList.add('hidden');
+        if (localSearchResults) localSearchResults.innerHTML = '';
+        if (remoteSearchResults) remoteSearchResults.innerHTML = '';
+        return;
+    }
+
+    const remoteMatches = await fetchRemoteTracksByTitle(query);
+    renderSearchList(localSearchResults, [], { clickable: false });
+    renderSearchList(remoteSearchResults, remoteMatches);
+
+    searchResults.classList.remove('hidden');
+}
+
+function initTrackSearch() {
+    if (!trackSearchInput) return;
+
+    trackSearchInput.addEventListener('input', () => {
+        clearTimeout(trackSearchTimer);
+        trackSearchTimer = setTimeout(() => {
+            handleTrackSearch();
+        }, 250);
+    });
+}
+
+// [ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ]
 
     if (!query) {
         searchResults.classList.add('hidden');
@@ -1122,13 +1295,16 @@ function updatePlaylistsGrid() {
 
 function openPlaylistEditor(playlistId = null) {
     currentPlaylistId = playlistId;
+    playlistEditMode = !playlistId;
     
     if (playlistId) {
         const playlist = playlists.find(p => p.id === playlistId);
         if (playlist) {
-            playlistModalTitle.textContent = 'Редактировать плейлист';
             playlistNameInput.value = playlist.name || '';
             playlistDescInput.value = playlist.desc || '';
+            if (playlistVisibilityInput) {
+                playlistVisibilityInput.checked = playlist.isPublic !== false;
+            }
             
             if (playlist.cover) {
                 const img = new Image();
@@ -1140,20 +1316,25 @@ function openPlaylistEditor(playlistId = null) {
                 drawGradientAlbumArt(playlistCoverEdit);
             }
             
-            deletePlaylistBtn.classList.remove('hidden');
+            playlistFollowBtn?.classList.toggle('hidden', isPlaylistOwner(playlist));
+            playlistEditFocusBtn?.classList.toggle('hidden', !isPlaylistOwner(playlist));
         }
     } else {
-        playlistModalTitle.textContent = 'Создать плейлист';
         playlistNameInput.value = '';
         playlistDescInput.value = '';
         draftPlaylistTracks = [];
+        if (playlistVisibilityInput) {
+            playlistVisibilityInput.checked = true;
+        }
         drawGradientAlbumArt(playlistCoverEdit);
-        deletePlaylistBtn.classList.add('hidden');
+        playlistFollowBtn?.classList.add('hidden');
+        playlistEditFocusBtn?.classList.remove('hidden');
     }
     
     updateAvailableTracksList();
     updatePlaylistTracksList();
     updatePlaylistMeta();
+    setPlaylistMode(playlistEditMode);
     
     playlistModal.classList.remove('hidden');
 }
@@ -1166,6 +1347,11 @@ function updateAvailableTracksList() {
     availableTracksList.innerHTML = '';
     
     const searchTerm = playlistSearchInput ? playlistSearchInput.value.toLowerCase() : '';
+    if (!searchTerm.trim()) {
+        availableTracksList.classList.add('hidden');
+        return;
+    }
+    availableTracksList.classList.remove('hidden');
     const filteredTracks = tracks.filter(track => 
         track.title.toLowerCase().includes(searchTerm) || 
         (track.artist && track.artist.toLowerCase().includes(searchTerm))
@@ -1354,6 +1540,8 @@ savePlaylistBtn.addEventListener('click', () => {
         if (playlist) {
             playlist.name = name;
             playlist.desc = desc;
+            playlist.isPublic = playlistVisibilityInput ? playlistVisibilityInput.checked : true;
+            playlist.updatedAt = new Date().toISOString();
         }
     } else {
         // Создаем новый
@@ -1363,7 +1551,10 @@ savePlaylistBtn.addEventListener('click', () => {
             desc: desc,
             tracks: draftPlaylistTracks,
             cover: null,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            owner: CURRENT_USER_NAME,
+            isPublic: playlistVisibilityInput ? playlistVisibilityInput.checked : true
         };
         playlists.push(newPlaylist);
     }
@@ -1371,6 +1562,7 @@ savePlaylistBtn.addEventListener('click', () => {
     localStorage.setItem('playlists', JSON.stringify(playlists));
     updatePlaylistsGrid();
     updatePlaylistMeta();
+    setPlaylistMode(false);
     playlistModal.classList.add('hidden');
 });
 
@@ -1393,8 +1585,25 @@ if (playlistShuffleBtn) {
 
 if (playlistEditFocusBtn) {
     playlistEditFocusBtn.addEventListener('click', () => {
+        setPlaylistMode(true);
         playlistNameInput?.focus();
         playlistNameInput?.select?.();
+    });
+}
+
+if (playlistFollowBtn) {
+    playlistFollowBtn.addEventListener('click', () => {
+        const playlist = playlists.find((p) => p.id === currentPlaylistId);
+        if (!playlist) return;
+        const clonedPlaylist = {
+            ...playlist,
+            id: Date.now().toString(),
+            owner: CURRENT_USER_NAME,
+            updatedAt: new Date().toISOString()
+        };
+        playlists.push(clonedPlaylist);
+        localStorage.setItem('playlists', JSON.stringify(playlists));
+        updatePlaylistsGrid();
     });
 }
 
@@ -1406,10 +1615,22 @@ if (playlistSearchInput) {
     playlistSearchInput.addEventListener('input', updateAvailableTracksList);
 }
 
-// ========== ОБЛОЖКА ПЛЕЙЛИСТА ==========
-changePlaylistCoverBtn.addEventListener('click', () => {
-    coverFileInput.click();
-});
+// [ОБЛОЖКА ПЛЕЙЛИСТА]
+if (changePlaylistCoverBtn) {
+    changePlaylistCoverBtn.addEventListener('click', () => {
+        if (playlistEditMode) {
+            coverFileInput.click();
+        }
+    });
+}
+
+if (playlistCoverEdit) {
+    playlistCoverEdit.addEventListener('click', () => {
+        if (playlistEditMode) {
+            coverFileInput.click();
+        }
+    });
+}
 
 coverFileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -1840,7 +2061,7 @@ audio.addEventListener('timeupdate', () => {
         const progress = (audio.currentTime / totalDuration) * 100;
         progressBar.value = progress;
         refreshProgressFill();
-        timeDisplay.textContent = `${formatTime(audio.currentTime)}`;
+        timeDisplay.textContent = formatTime(audio.currentTime);
         updateActiveTrackTimeInList();
         updateActiveTrackTimeInRecent();
     }
@@ -1873,6 +2094,13 @@ audio.addEventListener('loadedmetadata', () => {
         updateTracklist();
         updateRecentTracksList();
     }
+
+    if (currentTrackIndex >= 0 && tracks[currentTrackIndex]) {
+        tracks[currentTrackIndex].duration = getTrackDurationValue({ duration: audio.duration }) || getTrackDurationValue(tracks[currentTrackIndex]);
+        saveTracks();
+        updateTracklist();
+        updateRecentTracksList();
+    }
 });
 
 audio.addEventListener('play', () => {
@@ -1884,6 +2112,22 @@ audio.addEventListener('pause', () => {
     isPlaying = false;
     updatePlayPauseButton();
 });
+
+audio.addEventListener('play', () => {
+    isPlaying = true;
+    updatePlayPauseButton();
+});
+
+audio.addEventListener('playing', () => {
+    isPlaying = true;
+    updatePlayPauseButton();
+});
+
+audio.addEventListener('pause', () => {
+    isPlaying = false;
+    updatePlayPauseButton();
+});
+
 
 function paintRangeFill(input, percent, activeColor = '#6d26ff', baseColor = '#1c2230') {
     if (!input) return;

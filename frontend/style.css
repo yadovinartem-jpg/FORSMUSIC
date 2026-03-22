@@ -2839,6 +2839,14 @@ body,
   flex-wrap: wrap;
 }
 
+.playlist-view-panel.hidden,
+.playlist-edit-panel.hidden,
+.playlist-search.hidden,
+.available-tracks-list.hidden,
+.playlist-hero-btn.hidden {
+  display: none !important;
+}
+
 .playlist-hero-btn {
   min-height: 48px;
   padding: 0 18px;
@@ -2861,6 +2869,19 @@ body,
   padding: 18px 0 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.playlist-visibility-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #d3c6ff;
+  font-size: 16px;
+}
+
+.playlist-visibility-toggle input {
+  width: 18px;
+  height: 18px;
 }
 
 .playlist-search input,
@@ -2944,12 +2965,14 @@ body,
 .playlist-actions {
   display: flex;
   gap: 12px;
+  justify-content: space-between;
 }
 
 .save-playlist-btn,
 .delete-playlist-btn {
   min-height: 48px;
   border-radius: 12px;
+  min-width: 180px;
 }
 
 @media (max-width: 720px) {
