@@ -93,25 +93,25 @@ async function getFileInfo(remotePath) {
         throw error;
     }
 }
-async function listMusicFiles() {
-  const response = await yandexApi.get('/resources', {
-    params: {
-      path: '/forsity-music',
-      limit: 200
-    }
-  });
 
-  return response.data._embedded?.items || [];
+async function listMusicFiles() {
+    const response = await yandexApi.get('/resources', {
+        params: {
+            path: '/forsity-music',
+            limit: 200
+        }
+    });
+    return response.data._embedded?.items || [];
 }
 
 async function deleteFile(remotePath) {
-  await yandexApi.delete('/resources', {
-    params: { path: remotePath, permanently: true }
-  });
-  console.log('✅ Файл удалён с Яндекс.Диска');
+    await yandexApi.delete('/resources', {
+        params: { path: remotePath, permanently: true }
+    });
+    console.log('✅ Файл удалён с Яндекс.Диска');
 }
 
-// Проверка здоровья
+// ========== HEALTH CHECK ==========
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
@@ -122,7 +122,7 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Загрузка файла (ЛОКАЛЬНО)
+// ========== ЗАГРУЗКА ФАЙЛА (ЛОКАЛЬНО) ==========
 app.post('/api/upload', upload.single('audio'), (req, res) => {
     try {
         if (!req.file) {
@@ -151,12 +151,11 @@ app.post('/api/upload', upload.single('audio'), (req, res) => {
     }
 });
 
-// Стриминг локального файла
+// ========== СТРИМИНГ ЛОКАЛЬНОГО ФАЙЛА ==========
 app.get('/api/stream/:filename', (req, res) => {
     const filename = req.params.filename;
     const filepath = path.join(uploadDir, filename);
 
-    // Проверяем существование файла
     if (!fs.existsSync(filepath)) {
         return res.status(404).json({ error: 'Файл не найден' });
     }
@@ -188,7 +187,7 @@ app.get('/api/stream/:filename', (req, res) => {
     }
 });
 
-// Получить список загруженных файлов
+// ========== СПИСОК ЛОКАЛЬНЫХ ФАЙЛОВ ==========
 app.get('/api/files', (req, res) => {
     try {
         const files = fs.readdirSync(uploadDir).map(filename => {
@@ -206,7 +205,7 @@ app.get('/api/files', (req, res) => {
     }
 });
 
-// Удалить файл
+// ========== УДАЛЕНИЕ ЛОКАЛЬНОГО ФАЙЛА ==========
 app.delete('/api/delete/:filename', (req, res) => {
     const filename = req.params.filename;
     const filepath = path.join(uploadDir, filename);
@@ -271,48 +270,41 @@ if (YANDEX_TOKEN) {
         }
     });
 
-app.get('/api/search', async (req, res) => {
-  try {
-    const query = String(req.query.q || '').trim().toLowerCase();
-    if (!query) {
-      return res.json({ results: [] });
-    }
+    // Поиск на Яндекс.Диске
+    app.get('/api/search', async (req, res) => {
+        try {
+            const query = String(req.query.q || '').trim().toLowerCase();
+            if (!query) {
+                return res.json({ results: [] });
+            }
 
-    const items = await listMusicFiles();
-    const results = items
-      .filter((item) => item.type === 'file')
-      .map((item) => {
-        const baseName = item.name.replace(/\.[^.]+$/, '');
-        const [titlePart, artistPart] = baseName.split(' - ');
-        return {
-          title: titlePart || baseName,
-          artist: artistPart || '',
-          name: item.name,
-          path: item.path,
-          addedAt: item.created || item.modified || new Date().toISOString()
-        };
-      })
-      .filter((item) => {
-        const haystack = `${item.title} ${item.artist} ${item.name}`.toLowerCase();
-        return haystack.includes(query);
-      })
-      .slice(0, 30);
+            const items = await listMusicFiles();
+            const results = items
+                .filter((item) => item.type === 'file')
+                .map((item) => {
+                    const baseName = item.name.replace(/\.[^.]+$/, '');
+                    const [titlePart, artistPart] = baseName.split(' - ');
+                    return {
+                        title: titlePart || baseName,
+                        artist: artistPart || '',
+                        name: item.name,
+                        path: item.path,
+                        addedAt: item.created || item.modified || new Date().toISOString()
+                    };
+                })
+                .filter((item) => {
+                    const haystack = `${item.title} ${item.artist} ${item.name}`.toLowerCase();
+                    return haystack.includes(query);
+                })
+                .slice(0, 30);
 
-    res.json({ results });
-  } catch (error) {
-    console.error('❌ Ошибка поиска треков:', error.response?.data || error.message);
-    res.status(500).json({ error: 'Search failed' });
-  }
-});
-
-// ========== HEALTH CHECK ==========
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    storage: 'yandex-disk',
-    timestamp: new Date().toISOString()
-  });
-});
+            res.json({ results });
+        } catch (error) {
+            console.error('❌ Ошибка поиска треков:', error.response?.data || error.message);
+            res.status(500).json({ error: 'Search failed' });
+        }
+    });
+}
 
 // ========== ЗАПУСК СЕРВЕРА ==========
 app.listen(PORT, '0.0.0.0', () => {
